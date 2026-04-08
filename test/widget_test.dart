@@ -10,7 +10,11 @@ void main() {
     expect(find.text('Messages-first utility hub'), findsOneWidget);
     expect(find.text('Design sprint sync'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView), const Offset(0, -700));
+    await tester.scrollUntilVisible(
+      find.text('Try a share link'),
+      400,
+      scrollable: find.byType(Scrollable),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Try a share link'), findsOneWidget);

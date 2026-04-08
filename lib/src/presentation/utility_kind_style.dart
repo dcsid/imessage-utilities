@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 Color utilityKindColor(UtilityKind kind) {
   switch (kind) {
     case UtilityKind.availability:
-      return const Color(0xFF0D5C63);
+      return const Color(0xFF007AFF);
     case UtilityKind.poll:
-      return const Color(0xFF9A3412);
+      return const Color(0xFFFF9F0A);
     case UtilityKind.checklist:
-      return const Color(0xFF365314);
+      return const Color(0xFF34C759);
     case UtilityKind.picks:
-      return const Color(0xFF5B21B6);
+      return const Color(0xFFAF52DE);
   }
 }
 

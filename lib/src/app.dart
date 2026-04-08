@@ -1,10 +1,12 @@
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
 import 'package:chat_utilities_hub/src/data/utility_repository.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
+import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/screens/home_screen.dart';
 import 'package:chat_utilities_hub/src/screens/utility_detail_screen.dart';
 import 'package:chat_utilities_hub/src/state/utility_app_state.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ChatUtilitiesHubApp extends StatefulWidget {
   const ChatUtilitiesHubApp({super.key, this.initialLink, this.repository});
@@ -48,9 +50,72 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF0D5C63),
+      seedColor: AppPalette.heroMiddle,
       brightness: Brightness.light,
-      surface: const Color(0xFFF6F1E7),
+      surface: AppPalette.surfaceStrong,
+    );
+    final baseTextTheme = GoogleFonts.manropeTextTheme();
+    final textTheme = baseTextTheme.copyWith(
+      displayLarge: GoogleFonts.spaceGrotesk(
+        fontSize: 56,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+        height: 0.92,
+      ),
+      displayMedium: GoogleFonts.spaceGrotesk(
+        fontSize: 44,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+        height: 0.96,
+      ),
+      headlineLarge: GoogleFonts.spaceGrotesk(
+        fontSize: 34,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+        height: 1,
+      ),
+      headlineMedium: GoogleFonts.spaceGrotesk(
+        fontSize: 30,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+        height: 1.02,
+      ),
+      headlineSmall: GoogleFonts.spaceGrotesk(
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+        height: 1.1,
+      ),
+      titleLarge: GoogleFonts.spaceGrotesk(
+        fontSize: 21,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+      ),
+      titleMedium: GoogleFonts.spaceGrotesk(
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+      ),
+      bodyLarge: GoogleFonts.manrope(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: AppPalette.text,
+      ),
+      bodyMedium: GoogleFonts.manrope(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: AppPalette.text,
+      ),
+      bodySmall: GoogleFonts.manrope(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppPalette.mutedText,
+      ),
+      labelLarge: GoogleFonts.manrope(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: AppPalette.text,
+      ),
     );
 
     return MaterialApp.router(
@@ -58,20 +123,83 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: colorScheme,
-        scaffoldBackgroundColor: const Color(0xFFF3EBDD),
+        scaffoldBackgroundColor: AppPalette.canvas,
         useMaterial3: true,
-        textTheme: Theme.of(context).textTheme.apply(
-          bodyColor: const Color(0xFF1B263B),
-          displayColor: const Color(0xFF102A43),
+        textTheme: textTheme,
+        appBarTheme: AppBarTheme(
+          centerTitle: false,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          foregroundColor: AppPalette.text,
+          titleTextStyle: textTheme.titleLarge?.copyWith(
+            color: AppPalette.text,
+          ),
         ),
         cardTheme: CardThemeData(
-          color: Colors.white,
+          color: AppPalette.surfaceStrong,
           elevation: 0,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-            side: const BorderSide(color: Color(0xFFE7DBC8)),
+            borderRadius: BorderRadius.circular(30),
+            side: const BorderSide(color: AppPalette.border),
           ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppPalette.heroMiddle,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            textStyle: textTheme.labelLarge,
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppPalette.text,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            side: const BorderSide(color: AppPalette.border),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            textStyle: textTheme.labelLarge,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.9),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 18,
+          ),
+          labelStyle: textTheme.bodyMedium?.copyWith(
+            color: AppPalette.mutedText,
+          ),
+          hintStyle: textTheme.bodyMedium?.copyWith(
+            color: AppPalette.mutedText.withValues(alpha: 0.82),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(22),
+            borderSide: const BorderSide(color: AppPalette.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(22),
+            borderSide: const BorderSide(
+              color: AppPalette.heroMiddle,
+              width: 1.4,
+            ),
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: AppPalette.heroStart,
+          contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
       ),
       routerDelegate: _routerDelegate,
