@@ -1,7 +1,6 @@
 class CreatePlanningBoardInput {
   const CreatePlanningBoardInput({
     required this.title,
-    required this.prompt,
     required this.createdBy,
     required this.participants,
     required this.startDate,
@@ -12,7 +11,6 @@ class CreatePlanningBoardInput {
   });
 
   final String title;
-  final String prompt;
   final String createdBy;
   final List<String> participants;
   final DateTime startDate;

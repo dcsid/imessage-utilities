@@ -13,26 +13,4 @@ abstract class UtilityRepository {
     required String participantName,
     required Set<String> selectedOptionIds,
   });
-
-  UtilityInstance voteForVenue({
-    required String utilityId,
-    required int venueIndex,
-  });
-
-  UtilityInstance addVenueOption({
-    required String utilityId,
-    required String name,
-    required String detail,
-  });
-
-  UtilityInstance toggleChecklistItem({
-    required String utilityId,
-    required int checklistIndex,
-  });
-
-  UtilityInstance addChecklistItem({
-    required String utilityId,
-    required String title,
-    required String assignee,
-  });
 }

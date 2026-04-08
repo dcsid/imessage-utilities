@@ -1,13 +1,11 @@
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
 import 'package:chat_utilities_hub/src/data/utility_repository.dart';
-import 'package:chat_utilities_hub/src/models/planning_board_draft.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/screens/home_screen.dart';
 import 'package:chat_utilities_hub/src/screens/utility_detail_screen.dart';
 import 'package:chat_utilities_hub/src/state/utility_app_state.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class ChatUtilitiesHubApp extends StatefulWidget {
   const ChatUtilitiesHubApp({super.key, this.initialLink, this.repository});
@@ -51,72 +49,9 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppPalette.heroMiddle,
+      seedColor: AppPalette.primary,
       brightness: Brightness.light,
-      surface: AppPalette.surfaceStrong,
-    );
-    final baseTextTheme = GoogleFonts.manropeTextTheme();
-    final textTheme = baseTextTheme.copyWith(
-      displayLarge: GoogleFonts.spaceGrotesk(
-        fontSize: 56,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-        height: 0.92,
-      ),
-      displayMedium: GoogleFonts.spaceGrotesk(
-        fontSize: 44,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-        height: 0.96,
-      ),
-      headlineLarge: GoogleFonts.spaceGrotesk(
-        fontSize: 34,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-        height: 1,
-      ),
-      headlineMedium: GoogleFonts.spaceGrotesk(
-        fontSize: 30,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-        height: 1.02,
-      ),
-      headlineSmall: GoogleFonts.spaceGrotesk(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-        height: 1.1,
-      ),
-      titleLarge: GoogleFonts.spaceGrotesk(
-        fontSize: 21,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-      ),
-      titleMedium: GoogleFonts.spaceGrotesk(
-        fontSize: 17,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-      ),
-      bodyLarge: GoogleFonts.manrope(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: AppPalette.text,
-      ),
-      bodyMedium: GoogleFonts.manrope(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: AppPalette.text,
-      ),
-      bodySmall: GoogleFonts.manrope(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: AppPalette.mutedText,
-      ),
-      labelLarge: GoogleFonts.manrope(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: AppPalette.text,
-      ),
+      surface: AppPalette.surface,
     );
 
     return MaterialApp.router(
@@ -124,82 +59,69 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: colorScheme,
-        scaffoldBackgroundColor: AppPalette.canvas,
         useMaterial3: true,
-        textTheme: textTheme,
-        appBarTheme: AppBarTheme(
+        scaffoldBackgroundColor: AppPalette.canvas,
+        appBarTheme: const AppBarTheme(
           centerTitle: false,
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           foregroundColor: AppPalette.text,
-          titleTextStyle: textTheme.titleLarge?.copyWith(
-            color: AppPalette.text,
-          ),
         ),
         cardTheme: CardThemeData(
-          color: AppPalette.surfaceStrong,
+          color: AppPalette.surface,
           elevation: 0,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(24),
             side: const BorderSide(color: AppPalette.border),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppPalette.surface,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: AppPalette.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: AppPalette.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(
+              color: AppPalette.primary,
+              width: 1.2,
+            ),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: AppPalette.heroMiddle,
+            backgroundColor: AppPalette.primary,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
             ),
-            textStyle: textTheme.labelLarge,
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             foregroundColor: AppPalette.text,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             side: const BorderSide(color: AppPalette.border),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            textStyle: textTheme.labelLarge,
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white.withValues(alpha: 0.9),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 18,
-          ),
-          labelStyle: textTheme.bodyMedium?.copyWith(
-            color: AppPalette.mutedText,
-          ),
-          hintStyle: textTheme.bodyMedium?.copyWith(
-            color: AppPalette.mutedText.withValues(alpha: 0.82),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(22),
-            borderSide: const BorderSide(color: AppPalette.border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(22),
-            borderSide: const BorderSide(
-              color: AppPalette.heroMiddle,
-              width: 1.4,
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
         ),
-        snackBarTheme: SnackBarThemeData(
-          backgroundColor: AppPalette.heroStart,
-          contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
+        snackBarTheme: const SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
         ),
       ),
@@ -212,16 +134,13 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
 }
 
 class UtilityRoutePath {
-  const UtilityRoutePath.home() : utilityId = null, composeDraft = null;
+  const UtilityRoutePath.home() : utilityId = null;
 
-  const UtilityRoutePath.utility(this.utilityId) : composeDraft = null;
-
-  const UtilityRoutePath.compose(this.composeDraft) : utilityId = null;
+  const UtilityRoutePath.utility(this.utilityId);
 
   final String? utilityId;
-  final PlanningBoardDraft? composeDraft;
 
-  bool get isHome => utilityId == null && composeDraft == null;
+  bool get isHome => utilityId == null;
 }
 
 class UtilityRouteInformationParser
@@ -232,41 +151,15 @@ class UtilityRouteInformationParser
   Future<UtilityRoutePath> parseRouteInformation(
     RouteInformation routeInformation,
   ) async {
-    final uri = routeInformation.uri;
-    final segments = UtilityLink.normalizedSegments(uri);
-
-    if (segments.isEmpty) {
-      return const UtilityRoutePath.home();
-    }
-
-    if (segments.first == UtilityLink.composeHost) {
-      return UtilityRoutePath.compose(
-        UtilityLink.parseComposeDraft(routeInformation.uri.toString()) ??
-            const PlanningBoardDraft(),
-      );
-    }
-
+    final segments = UtilityLink.normalizedSegments(routeInformation.uri);
     if (segments.length >= 2 && segments.first == UtilityLink.utilityHost) {
       return UtilityRoutePath.utility(segments[1]);
     }
-
     return const UtilityRoutePath.home();
   }
 
   @override
   RouteInformation? restoreRouteInformation(UtilityRoutePath configuration) {
-    final composeDraft = configuration.composeDraft;
-    if (composeDraft != null) {
-      return RouteInformation(
-        uri: UtilityLink.forComposeDraft(
-          title: composeDraft.title,
-          prompt: composeDraft.prompt,
-          createdBy: composeDraft.createdBy,
-          participants: composeDraft.participants,
-        ),
-      );
-    }
-
     if (configuration.isHome) {
       return RouteInformation(uri: Uri(path: '/'));
     }
@@ -308,10 +201,7 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
           child: HomeScreen(
             utilities: _appState.utilities,
             onOpenUtility: _appState.openUtility,
-            onOpenLink: _appState.openUtilityLink,
             onCreateBoard: _appState.createPlanningBoard,
-            composeDraft: _appState.pendingComposeDraft,
-            onComposeDraftHandled: _appState.clearPendingComposeDraft,
           ),
         ),
         if (selectedUtility != null)
@@ -321,14 +211,10 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
               utility: selectedUtility,
               onBack: _appState.showHome,
               onSaveResponse: _appState.saveResponse,
-              onVoteForVenue: _appState.voteForVenue,
-              onAddVenueOption: _appState.addVenueOption,
-              onToggleChecklistItem: _appState.toggleChecklistItem,
-              onAddChecklistItem: _appState.addChecklistItem,
             ),
           ),
       ],
-      onDidRemovePage: (Page<Object?> page) {
+      onDidRemovePage: (page) {
         if (!_appState.currentPath.isHome) {
           _appState.showHome();
         }

@@ -10,6 +10,7 @@
 		A1B2C3D41E00000000000001 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D41E00000000000006 /* MessagesViewController.swift */; };
 		A1B2C3D41E00000000000002 /* Messages.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B2C3D41E00000000000009 /* Messages.framework */; };
 		A1B2C3D41E00000000000003 /* PlanTogetherMessages.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A1B2C3D41E00000000000008 /* PlanTogetherMessages.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1B2C3D41E00000000000020 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D41E00000000000021 /* MainInterface.storyboard */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		1F33EE8D5745A884FB35C8D9 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F1388D9DEA6756F84910B44B /* Pods_RunnerTests.framework */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
@@ -78,6 +79,7 @@
 		A1B2C3D41E00000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1B2C3D41E00000000000008 /* PlanTogetherMessages.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PlanTogetherMessages.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D41E00000000000009 /* Messages.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Messages.framework; path = System/Library/Frameworks/Messages.framework; sourceTree = SDKROOT; };
+		A1B2C3D41E00000000000022 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D41E00000000000006 /* MessagesViewController.swift */,
+				A1B2C3D41E00000000000021 /* MainInterface.storyboard */,
 				A1B2C3D41E00000000000007 /* Info.plist */,
 			);
 			path = MessagesExtension;
@@ -330,6 +333,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1B2C3D41E00000000000020 /* MainInterface.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -467,6 +471,14 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
+		A1B2C3D41E00000000000021 /* MainInterface.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A1B2C3D41E00000000000022 /* Base */,
+			);
+			name = MainInterface.storyboard;
+			sourceTree = "<group>";
+		};
 		97C146FA1CF9000F007C117D /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
