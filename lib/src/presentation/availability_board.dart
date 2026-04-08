@@ -4,17 +4,25 @@ import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/date_labels.dart';
 import 'package:flutter/material.dart';
 
+enum AvailabilityBoardMode { aggregate, selection }
+
 class AvailabilityBoard extends StatelessWidget {
   const AvailabilityBoard({
     super.key,
     required this.utility,
     required this.accent,
     this.compact = false,
+    this.mode = AvailabilityBoardMode.aggregate,
+    this.selectedOptionIds = const <String>{},
+    this.onToggleOption,
   });
 
   final UtilityInstance utility;
   final Color accent;
   final bool compact;
+  final AvailabilityBoardMode mode;
+  final Set<String> selectedOptionIds;
+  final ValueChanged<String>? onToggleOption;
 
   @override
   Widget build(BuildContext context) {
@@ -46,10 +54,17 @@ class AvailabilityBoard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!compact) ...[
-          Text('When2Meet-style board', style: theme.textTheme.titleLarge),
+          Text(
+            mode == AvailabilityBoardMode.aggregate
+                ? 'When2Meet-style board'
+                : 'Tap the cells that work for you',
+            style: theme.textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
           Text(
-            'Darker cells mean more overlap. The highlighted cell is the best current slot.',
+            mode == AvailabilityBoardMode.aggregate
+                ? 'Darker cells mean more overlap. The highlighted cell is the best current slot.'
+                : 'Selected cells become your availability. Save the board to update the shared overlap.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppPalette.mutedText,
               height: 1.45,
@@ -89,22 +104,30 @@ class AvailabilityBoard extends StatelessWidget {
                       ),
                     ),
                     for (final day in days)
-                      _BoardCell(
-                        option: optionByCell[_cellKeyFromParts(day, minutes)],
-                        score: optionByCell[_cellKeyFromParts(day, minutes)] ==
-                                null
-                            ? null
-                            : scoresById[
-                                optionByCell[_cellKeyFromParts(day, minutes)]!.id
-                              ],
-                        totalParticipants: utility.participants.length,
-                        accent: accent,
-                        width: cellWidth,
-                        height: cellHeight,
-                        compact: compact,
-                        isBest:
-                            optionByCell[_cellKeyFromParts(day, minutes)]?.id ==
-                            bestOptionId,
+                      Builder(
+                        builder: (context) {
+                          final option =
+                              optionByCell[_cellKeyFromParts(day, minutes)];
+                          return _BoardCell(
+                            option: option,
+                            score: option == null ? null : scoresById[option.id],
+                            totalParticipants: utility.participants.length,
+                            accent: accent,
+                            width: cellWidth,
+                            height: cellHeight,
+                            compact: compact,
+                            mode: mode,
+                            isSelected:
+                                option != null &&
+                                selectedOptionIds.contains(option.id),
+                            onTap: option == null || onToggleOption == null
+                                ? null
+                                : () => onToggleOption?.call(option.id),
+                            isBest:
+                                mode == AvailabilityBoardMode.aggregate &&
+                                option?.id == bestOptionId,
+                          );
+                        },
                       ),
                   ],
                 ),
@@ -173,8 +196,8 @@ class _BoardDayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weekdayLabels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final monthLabels = const [
+    const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const monthLabels = [
       'Jan',
       'Feb',
       'Mar',
@@ -222,6 +245,9 @@ class _BoardCell extends StatelessWidget {
     required this.width,
     required this.height,
     required this.compact,
+    required this.mode,
+    required this.isSelected,
+    required this.onTap,
     required this.isBest,
   });
 
@@ -232,111 +258,147 @@ class _BoardCell extends StatelessWidget {
   final double width;
   final double height;
   final bool compact;
+  final AvailabilityBoardMode mode;
+  final bool isSelected;
+  final VoidCallback? onTap;
   final bool isBest;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final coverage = score?.coverage(totalParticipants) ?? 0;
+    final isAggregate = mode == AvailabilityBoardMode.aggregate;
     final fillColor = option == null
         ? Colors.white.withValues(alpha: 0.48)
-        : Color.lerp(Colors.white, accent, 0.12 + (coverage * 0.58))!;
-    final foreground = coverage >= 0.42 ? Colors.white : AppPalette.text;
-    final subtext = coverage >= 0.42
+        : isAggregate
+        ? Color.lerp(Colors.white, accent, 0.12 + (coverage * 0.58))!
+        : isSelected
+        ? accent
+        : Colors.white;
+    final foreground = isAggregate
+        ? coverage >= 0.42
+              ? Colors.white
+              : AppPalette.text
+        : isSelected
+        ? Colors.white
+        : AppPalette.text;
+    final subtext = isAggregate
+        ? coverage >= 0.42
+              ? Colors.white.withValues(alpha: 0.82)
+              : AppPalette.mutedText
+        : isSelected
         ? Colors.white.withValues(alpha: 0.82)
         : AppPalette.mutedText;
 
-    return Container(
-      width: width,
-      height: height,
-      margin: const EdgeInsets.only(left: 8),
-      decoration: BoxDecoration(
-        color: fillColor,
-        borderRadius: BorderRadius.circular(compact ? 18 : 20),
-        border: Border.all(
-          color: isBest ? accent : AppPalette.border,
-          width: isBest ? 1.6 : 1,
-        ),
-        boxShadow: isBest
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ]
-            : null,
-      ),
-      child: option == null
-          ? Center(
-              child: Text(
-                '—',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: AppPalette.mutedText,
-                ),
-              ),
-            )
-          : Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: compact ? 10 : 12,
-                vertical: compact ? 8 : 10,
-              ),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${score?.votes ?? 0}/$totalParticipants',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: foreground,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          if (!compact)
-                            Text(
-                              'available',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: subtext,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        height: height,
+        margin: const EdgeInsets.only(left: 8),
+        decoration: BoxDecoration(
+          color: fillColor,
+          borderRadius: BorderRadius.circular(compact ? 18 : 20),
+          border: Border.all(
+            color: isBest || (!isAggregate && isSelected)
+                ? accent
+                : AppPalette.border,
+            width: isBest || (!isAggregate && isSelected) ? 1.6 : 1,
+          ),
+          boxShadow: isBest
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.18),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
                   ),
-                  if (isBest)
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: foreground.withValues(
-                            alpha: compact ? 0.14 : 0.18,
-                          ),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          compact ? 'Top' : 'Best',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: foreground,
-                            fontWeight: FontWeight.w700,
-                          ),
+                ]
+              : null,
+        ),
+        child: option == null
+            ? Center(
+                child: Text(
+                  '—',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: AppPalette.mutedText,
+                  ),
+                ),
+              )
+            : Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 10 : 12,
+                  vertical: compact ? 8 : 10,
+                ),
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isAggregate)
+                              Text(
+                                '${score?.votes ?? 0}/$totalParticipants',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: foreground,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              )
+                            else
+                              Icon(
+                                isSelected
+                                    ? Icons.check_rounded
+                                    : Icons.add_rounded,
+                                color: foreground,
+                                size: compact ? 18 : 22,
+                              ),
+                            if (!compact)
+                              Text(
+                                isAggregate
+                                    ? 'available'
+                                    : (isSelected ? 'free' : 'open'),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: subtext,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
-                ],
+                    if (isBest || (!isAggregate && isSelected))
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: foreground.withValues(
+                              alpha: compact ? 0.14 : 0.18,
+                            ),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            isAggregate
+                                ? (compact ? 'Top' : 'Best')
+                                : (compact ? 'Set' : 'Selected'),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: foreground,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:chat_utilities_hub/src/models/create_planning_board_input.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/models/utility_kind.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
@@ -17,11 +18,13 @@ class HomeScreen extends StatefulWidget {
     required this.utilities,
     required this.onOpenUtility,
     required this.onOpenLink,
+    required this.onCreateBoard,
   });
 
   final List<UtilityInstance> utilities;
   final ValueChanged<String> onOpenUtility;
   final bool Function(String rawLink) onOpenLink;
+  final ValueChanged<CreatePlanningBoardInput> onCreateBoard;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -46,6 +49,35 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _linkController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldFirstId = oldWidget.utilities.isEmpty ? null : oldWidget.utilities.first.id;
+    final newFirstId = widget.utilities.isEmpty ? null : widget.utilities.first.id;
+    if (oldFirstId != newFirstId && widget.utilities.isNotEmpty) {
+      final sampleUtility = widget.utilities.first;
+      _linkController.text = UtilityLink.forUtility(
+        sampleUtility.id,
+        kind: sampleUtility.kind.name,
+      ).toString();
+    }
+  }
+
+  Future<void> _showCreateBoardSheet() async {
+    final result = await showModalBottomSheet<CreatePlanningBoardInput>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _CreatePlanningBoardSheet(),
+    );
+
+    if (result == null || !mounted) {
+      return;
+    }
+
+    widget.onCreateBoard(result);
   }
 
   @override
@@ -162,10 +194,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 runSpacing: 12,
                 children: [
                   FilledButton.icon(
-                    onPressed: () => widget.onOpenUtility(utility.id),
+                    onPressed: _showCreateBoardSheet,
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: AppPalette.heroMiddle,
+                      foregroundColor: AppPalette.heroStart,
+                    ),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Create a board'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: () => widget.onOpenUtility(utility.id),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.18),
+                      foregroundColor: Colors.white,
                     ),
                     icon: const Icon(Icons.open_in_new_rounded),
                     label: const Text('Open planning board'),
@@ -193,8 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     value: '${(responseRate * 100).round()}%',
                   ),
                   _HeroMetric(
-                    label: 'Time windows',
-                    value: '${utility.options.length}',
+                    label: 'Boards live',
+                    value: '${widget.utilities.length}',
                   ),
                   _HeroMetric(
                     label: 'Best slot',
@@ -752,6 +793,274 @@ class _HighlightPanel extends StatelessWidget {
               height: 1.45,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreatePlanningBoardSheet extends StatefulWidget {
+  const _CreatePlanningBoardSheet();
+
+  @override
+  State<_CreatePlanningBoardSheet> createState() =>
+      _CreatePlanningBoardSheetState();
+}
+
+class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _promptController;
+  late final TextEditingController _creatorController;
+  late final TextEditingController _participantsController;
+  late DateTime _startDate;
+  late int _dayCount;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _titleController = TextEditingController(text: 'Team dinner plan');
+    _promptController = TextEditingController(
+      text:
+          'Find the best overlap first, then use the same board to finish the event details.',
+    );
+    _creatorController = TextEditingController(text: 'Maya');
+    _participantsController = TextEditingController(
+      text: 'Maya, Jordan, Ari, Nina, Chris',
+    );
+    _startDate = DateTime(now.year, now.month, now.day).add(
+      const Duration(days: 1),
+    );
+    _dayCount = 4;
+    _startTime = const TimeOfDay(hour: 18, minute: 0);
+    _endTime = const TimeOfDay(hour: 21, minute: 0);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _promptController.dispose();
+    _creatorController.dispose();
+    _participantsController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickStartDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: _startDate,
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _startDate = DateTime(selected.year, selected.month, selected.day);
+    });
+  }
+
+  Future<void> _pickTime({required bool isStart}) async {
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: isStart ? _startTime : _endTime,
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      if (isStart) {
+        _startTime = selected;
+      } else {
+        _endTime = selected;
+      }
+    });
+  }
+
+  void _submit() {
+    final participants = _participantsController.text
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+    final startMinutes = _startTime.hour * 60 + _startTime.minute;
+    final endMinutes = _endTime.hour * 60 + _endTime.minute;
+
+    if (_titleController.text.trim().isEmpty ||
+        _creatorController.text.trim().isEmpty ||
+        participants.length < 2 ||
+        endMinutes <= startMinutes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add a title, at least two participants, and a valid time range.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(
+      CreatePlanningBoardInput(
+        title: _titleController.text.trim(),
+        prompt: _promptController.text.trim(),
+        createdBy: _creatorController.text.trim(),
+        participants: participants,
+        startDate: _startDate,
+        dayCount: _dayCount,
+        dayStart: Duration(minutes: startMinutes),
+        dayEnd: Duration(minutes: endMinutes),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 24, 16, bottomInset + 16),
+      child: AppSurface(
+        radius: 32,
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Create planning board', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(
+                'This keeps the full board in Flutter/Dart, while the future iMessage extension can become the quick-create surface later.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppPalette.mutedText,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Event title'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _promptController,
+                maxLines: 2,
+                decoration: const InputDecoration(labelText: 'Plan summary'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _creatorController,
+                decoration: const InputDecoration(labelText: 'Organizer'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _participantsController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Participants',
+                  hintText: 'Maya, Jordan, Ari',
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Scheduling window', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _PickerButton(
+                    label: 'Start date',
+                    value:
+                        '${_startDate.month}/${_startDate.day}/${_startDate.year}',
+                    onPressed: _pickStartDate,
+                  ),
+                  _PickerButton(
+                    label: 'Start time',
+                    value: _startTime.format(context),
+                    onPressed: () => _pickTime(isStart: true),
+                  ),
+                  _PickerButton(
+                    label: 'End time',
+                    value: _endTime.format(context),
+                    onPressed: () => _pickTime(isStart: false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text('Days to include', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [3, 4, 5, 7]
+                    .map(
+                      (count) => ChoiceChip(
+                        label: Text('$count days'),
+                        selected: _dayCount == count,
+                        onSelected: (_) => setState(() => _dayCount = count),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _submit,
+                    icon: const Icon(Icons.auto_awesome_rounded),
+                    label: const Text('Create board'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PickerButton extends StatelessWidget {
+  const _PickerButton({
+    required this.label,
+    required this.value,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String value;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppPalette.mutedText,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(value),
         ],
       ),
     );

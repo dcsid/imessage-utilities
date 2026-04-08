@@ -286,6 +286,7 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
             utilities: _appState.utilities,
             onOpenUtility: _appState.openUtility,
             onOpenLink: _appState.openUtilityLink,
+            onCreateBoard: _appState.createPlanningBoard,
           ),
         ),
         if (selectedUtility != null)
@@ -294,6 +295,11 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
             child: UtilityDetailScreen(
               utility: selectedUtility,
               onBack: _appState.showHome,
+              onSaveResponse: _appState.saveResponse,
+              onVoteForVenue: _appState.voteForVenue,
+              onAddVenueOption: _appState.addVenueOption,
+              onToggleChecklistItem: _appState.toggleChecklistItem,
+              onAddChecklistItem: _appState.addChecklistItem,
             ),
           ),
       ],

@@ -16,10 +16,37 @@ class UtilityDetailScreen extends StatelessWidget {
     super.key,
     required this.utility,
     required this.onBack,
+    required this.onSaveResponse,
+    required this.onVoteForVenue,
+    required this.onAddVenueOption,
+    required this.onToggleChecklistItem,
+    required this.onAddChecklistItem,
   });
 
   final UtilityInstance utility;
   final VoidCallback onBack;
+  final void Function({
+    required String utilityId,
+    required String participantName,
+    required Set<String> selectedOptionIds,
+  })
+  onSaveResponse;
+  final void Function({required String utilityId, required int venueIndex})
+  onVoteForVenue;
+  final void Function({
+    required String utilityId,
+    required String name,
+    required String detail,
+  })
+  onAddVenueOption;
+  final void Function({required String utilityId, required int checklistIndex})
+  onToggleChecklistItem;
+  final void Function({
+    required String utilityId,
+    required String title,
+    required String assignee,
+  })
+  onAddChecklistItem;
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +211,19 @@ class UtilityDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 const SectionHeader(
+                  eyebrow: 'Respond now',
+                  title: 'Fill in availability',
+                  description:
+                      'Pick a participant, tap the time windows that work, and save back into the shared board.',
+                ),
+                const SizedBox(height: 18),
+                _ResponseComposerCard(
+                  utility: utility,
+                  accent: accent,
+                  onSaveResponse: onSaveResponse,
+                ),
+                const SizedBox(height: 28),
+                const SectionHeader(
                   eyebrow: 'Ranked schedule overlap',
                   title: 'Best overlap',
                   description:
@@ -268,13 +308,37 @@ class UtilityDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Venue shortlist',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Venue shortlist',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _showAddVenueSheet(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Add venue'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
-                    ...utility.venueOptions.map(
-                      (option) => _PlanningVenueRow(option: option),
+                    ...utility.venueOptions.asMap().entries.map(
+                      (entry) => _PlanningVenueRow(
+                        option: entry.value,
+                        onVote:
+                            () => onVoteForVenue(
+                              utilityId: utility.id,
+                              venueIndex: entry.key,
+                            ),
+                      ),
                     ),
                   ],
                 ),
@@ -286,13 +350,37 @@ class UtilityDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Checklist',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Checklist',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _showAddChecklistSheet(context),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_task_rounded),
+                          label: const Text('Add task'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
-                    ...utility.checklistItems.map(
-                      (item) => _ChecklistRow(item: item),
+                    ...utility.checklistItems.asMap().entries.map(
+                      (entry) => _ChecklistRow(
+                        item: entry.value,
+                        onToggle:
+                            () => onToggleChecklistItem(
+                              utilityId: utility.id,
+                              checklistIndex: entry.key,
+                            ),
+                      ),
                     ),
                   ],
                 ),
@@ -352,6 +440,48 @@ class UtilityDetailScreen extends StatelessWidget {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Planning link copied.')));
+  }
+
+  Future<void> _showAddVenueSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<_VenueDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _AddVenueSheet(),
+    );
+    if (result == null || !context.mounted) {
+      return;
+    }
+
+    onAddVenueOption(
+      utilityId: utility.id,
+      name: result.name,
+      detail: result.detail,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added ${result.name} to the venue shortlist.')),
+    );
+  }
+
+  Future<void> _showAddChecklistSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<_ChecklistDraft>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AddChecklistSheet(participants: utility.participants),
+    );
+    if (result == null || !context.mounted) {
+      return;
+    }
+
+    onAddChecklistItem(
+      utilityId: utility.id,
+      title: result.title,
+      assignee: result.assignee,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added "${result.title}" to the checklist.')),
+    );
   }
 }
 
@@ -550,9 +680,10 @@ class _ParticipantChip extends StatelessWidget {
 }
 
 class _PlanningVenueRow extends StatelessWidget {
-  const _PlanningVenueRow({required this.option});
+  const _PlanningVenueRow({required this.option, required this.onVote});
 
   final PlanningVenueOption option;
+  final VoidCallback onVote;
 
   @override
   Widget build(BuildContext context) {
@@ -599,11 +730,31 @@ class _PlanningVenueRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            '${option.votes}',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: const Color(0xFFFF9F0A),
-            ),
+          Column(
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: onVote,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF9F0A).withValues(
+                    alpha: 0.14,
+                  ),
+                  foregroundColor: const Color(0xFFFF9F0A),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                ),
+                icon: const Icon(Icons.how_to_vote_rounded, size: 18),
+                label: const Text('Vote'),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${option.votes} votes',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFFFF9F0A),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -612,9 +763,10 @@ class _PlanningVenueRow extends StatelessWidget {
 }
 
 class _ChecklistRow extends StatelessWidget {
-  const _ChecklistRow({required this.item});
+  const _ChecklistRow({required this.item, required this.onToggle});
 
   final PlanningChecklistItem item;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -666,6 +818,20 @@ class _ChecklistRow extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 12),
+          FilledButton.tonalIcon(
+            onPressed: onToggle,
+            style: FilledButton.styleFrom(
+              backgroundColor: accent.withValues(alpha: 0.14),
+              foregroundColor: accent,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            icon: Icon(
+              item.isComplete ? Icons.undo_rounded : Icons.check_rounded,
+              size: 18,
+            ),
+            label: Text(item.isComplete ? 'Reopen' : 'Complete'),
+          ),
         ],
       ),
     );
@@ -716,6 +882,400 @@ class _PlanningUpdateRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ResponseComposerCard extends StatefulWidget {
+  const _ResponseComposerCard({
+    required this.utility,
+    required this.accent,
+    required this.onSaveResponse,
+  });
+
+  final UtilityInstance utility;
+  final Color accent;
+  final void Function({
+    required String utilityId,
+    required String participantName,
+    required Set<String> selectedOptionIds,
+  })
+  onSaveResponse;
+
+  @override
+  State<_ResponseComposerCard> createState() => _ResponseComposerCardState();
+}
+
+class _ResponseComposerCardState extends State<_ResponseComposerCard> {
+  late String _participantName;
+  late Set<String> _selectedOptionIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _participantName = _initialParticipant(widget.utility);
+    _selectedOptionIds = _selectionsFor(widget.utility, _participantName);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ResponseComposerCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.utility != widget.utility) {
+      if (!widget.utility.participants.contains(_participantName)) {
+        _participantName = _initialParticipant(widget.utility);
+      }
+      _selectedOptionIds = _selectionsFor(widget.utility, _participantName);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final existingResponse = widget.utility.responseForParticipant(
+      _participantName,
+    );
+
+    return AppSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey('${widget.utility.id}-$_participantName'),
+                  initialValue: _participantName,
+                  decoration: const InputDecoration(labelText: 'Participant'),
+                  items: widget.utility.participants
+                      .map(
+                        (participant) => DropdownMenuItem<String>(
+                          value: participant,
+                          child: Text(participant),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _participantName = value;
+                      _selectedOptionIds = _selectionsFor(
+                        widget.utility,
+                        _participantName,
+                      );
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              _HeroChip(
+                label: existingResponse == null ? 'No reply yet' : 'Editing reply',
+                foregroundColor: widget.accent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Tap every time block that works for $_participantName.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppPalette.mutedText,
+            ),
+          ),
+          const SizedBox(height: 18),
+          AvailabilityBoard(
+            utility: widget.utility,
+            accent: widget.accent,
+            mode: AvailabilityBoardMode.selection,
+            selectedOptionIds: _selectedOptionIds,
+            onToggleOption: (optionId) {
+              setState(() {
+                final nextSelections = Set<String>.from(_selectedOptionIds);
+                if (!nextSelections.add(optionId)) {
+                  nextSelections.remove(optionId);
+                }
+                _selectedOptionIds = nextSelections;
+              });
+            },
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              FilledButton.icon(
+                onPressed: _selectedOptionIds.isEmpty
+                    ? null
+                    : () {
+                        widget.onSaveResponse(
+                          utilityId: widget.utility.id,
+                          participantName: _participantName,
+                          selectedOptionIds: _selectedOptionIds,
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Saved availability for $_participantName.',
+                            ),
+                          ),
+                        );
+                      },
+                icon: const Icon(Icons.save_rounded),
+                label: const Text('Save availability'),
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedOptionIds = _selectionsFor(
+                      widget.utility,
+                      _participantName,
+                    );
+                  });
+                },
+                child: const Text('Reset to saved'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _initialParticipant(UtilityInstance utility) {
+    for (final participant in utility.participants) {
+      if (utility.responseForParticipant(participant) == null) {
+        return participant;
+      }
+    }
+    return utility.participants.first;
+  }
+
+  Set<String> _selectionsFor(UtilityInstance utility, String participantName) {
+    final response = utility.responseForParticipant(participantName);
+    return response == null
+        ? <String>{}
+        : Set<String>.from(response.selectedOptionIds);
+  }
+}
+
+class _VenueDraft {
+  const _VenueDraft({required this.name, required this.detail});
+
+  final String name;
+  final String detail;
+}
+
+class _ChecklistDraft {
+  const _ChecklistDraft({required this.title, required this.assignee});
+
+  final String title;
+  final String assignee;
+}
+
+class _AddVenueSheet extends StatefulWidget {
+  const _AddVenueSheet();
+
+  @override
+  State<_AddVenueSheet> createState() => _AddVenueSheetState();
+}
+
+class _AddVenueSheetState extends State<_AddVenueSheet> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _detailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController();
+    _detailController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _detailController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final name = _nameController.text.trim();
+    final detail = _detailController.text.trim();
+    if (name.isEmpty || detail.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add both a venue name and a short note.')),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(_VenueDraft(name: name, detail: detail));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 24, 16, bottomInset + 16),
+      child: AppSurface(
+        radius: 30,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Add venue idea', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 8),
+            Text(
+              'Drop a shortlist option onto this board so the schedule winner can turn into a final plan quickly.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppPalette.mutedText,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Venue name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _detailController,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Quick note'),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add_location_alt_rounded),
+                  label: const Text('Add venue'),
+                ),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddChecklistSheet extends StatefulWidget {
+  const _AddChecklistSheet({required this.participants});
+
+  final List<String> participants;
+
+  @override
+  State<_AddChecklistSheet> createState() => _AddChecklistSheetState();
+}
+
+class _AddChecklistSheetState extends State<_AddChecklistSheet> {
+  late final TextEditingController _titleController;
+  late String _assignee;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _assignee = widget.participants.first;
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a task title before saving.')),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _ChecklistDraft(title: title, assignee: _assignee),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 24, 16, bottomInset + 16),
+      child: AppSurface(
+        radius: 30,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add checklist task',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Keep the post-scheduling work attached to the same board so the plan stays in one place.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppPalette.mutedText,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Task'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _assignee,
+              decoration: const InputDecoration(labelText: 'Assignee'),
+              items: widget.participants
+                  .map(
+                    (participant) => DropdownMenuItem<String>(
+                      value: participant,
+                      child: Text(participant),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                setState(() {
+                  _assignee = value;
+                });
+              },
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.add_task_rounded),
+                  label: const Text('Add task'),
+                ),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

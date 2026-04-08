@@ -37,6 +37,47 @@ class UtilityInstance {
 
   int get pendingResponseCount => participants.length - responseCount;
 
+  UtilityResponse? responseForParticipant(String participantName) {
+    for (final response in responses) {
+      if (response.participantName == participantName) {
+        return response;
+      }
+    }
+    return null;
+  }
+
+  UtilityInstance copyWith({
+    String? id,
+    UtilityKind? kind,
+    String? title,
+    String? prompt,
+    String? eventSummary,
+    String? createdBy,
+    List<String>? participants,
+    List<UtilityOption>? options,
+    List<UtilityResponse>? responses,
+    List<PlanningVenueOption>? venueOptions,
+    List<PlanningChecklistItem>? checklistItems,
+    List<PlanningUpdate>? planningUpdates,
+    DateTime? closesAt,
+  }) {
+    return UtilityInstance(
+      id: id ?? this.id,
+      kind: kind ?? this.kind,
+      title: title ?? this.title,
+      prompt: prompt ?? this.prompt,
+      eventSummary: eventSummary ?? this.eventSummary,
+      createdBy: createdBy ?? this.createdBy,
+      participants: participants ?? this.participants,
+      options: options ?? this.options,
+      responses: responses ?? this.responses,
+      venueOptions: venueOptions ?? this.venueOptions,
+      checklistItems: checklistItems ?? this.checklistItems,
+      planningUpdates: planningUpdates ?? this.planningUpdates,
+      closesAt: closesAt ?? this.closesAt,
+    );
+  }
+
   List<UtilityOptionScore> get optionScores {
     final scores = options
         .map(
@@ -83,6 +124,14 @@ class PlanningVenueOption {
   final String name;
   final String detail;
   final int votes;
+
+  PlanningVenueOption copyWith({String? name, String? detail, int? votes}) {
+    return PlanningVenueOption(
+      name: name ?? this.name,
+      detail: detail ?? this.detail,
+      votes: votes ?? this.votes,
+    );
+  }
 }
 
 class PlanningChecklistItem {
@@ -95,6 +144,18 @@ class PlanningChecklistItem {
   final String title;
   final String assignee;
   final bool isComplete;
+
+  PlanningChecklistItem copyWith({
+    String? title,
+    String? assignee,
+    bool? isComplete,
+  }) {
+    return PlanningChecklistItem(
+      title: title ?? this.title,
+      assignee: assignee ?? this.assignee,
+      isComplete: isComplete ?? this.isComplete,
+    );
+  }
 }
 
 class PlanningUpdate {
