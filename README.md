@@ -8,8 +8,9 @@ This slice now treats scheduling as the main product, then layers in the plannin
 
 - `Flutter app`
   - cross-platform planner for iPhone, Android, desktop, and web
-  - seeded `When2Meet`-style board
-  - event-planning modules around the same board
+  - seeded `When2Meet`-style board plus create-your-own planning boards
+  - live availability responses with overlap scoring
+  - venue voting and checklist actions on the same event board
   - deep-link routing for Messages handoff
 - `Future native iMessage extension`
   - compact in-chat creation and response UI
@@ -35,6 +36,15 @@ flutter run -d chrome
 The app is ready to open utility links like:
 
 `chatutilitieshub://utility/spring-launch-dinner?kind=availability`
+
+## Current product slice
+
+- create a new planning board from Flutter
+- fill in participant availability directly on the board
+- review ranked overlap to find the best slot
+- vote on venue options without leaving the event
+- add checklist tasks and mark them complete
+- use the same deep-link contract the future iMessage extension will send
 
 ## Verification
 
