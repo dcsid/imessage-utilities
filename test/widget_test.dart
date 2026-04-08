@@ -49,4 +49,20 @@ void main() {
     expect(find.text('Spring launch dinner'), findsWidgets);
     expect(find.text('Venue vote and checklist'), findsOneWidget);
   });
+
+  testWidgets('opens a compose draft from a Messages handoff link', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChatUtilitiesHubApp(
+        initialLink:
+            'chatutilitieshub://compose?title=Game%20Night&createdBy=Maya&participants=Maya,Jordan,Ari',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create planning board'), findsOneWidget);
+    expect(find.text('Game Night'), findsOneWidget);
+    expect(find.text('Maya, Jordan, Ari'), findsWidgets);
+  });
 }

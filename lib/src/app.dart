@@ -1,5 +1,6 @@
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
 import 'package:chat_utilities_hub/src/data/utility_repository.dart';
+import 'package:chat_utilities_hub/src/models/planning_board_draft.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/screens/home_screen.dart';
@@ -211,13 +212,16 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
 }
 
 class UtilityRoutePath {
-  const UtilityRoutePath.home() : utilityId = null;
+  const UtilityRoutePath.home() : utilityId = null, composeDraft = null;
 
-  const UtilityRoutePath.utility(this.utilityId);
+  const UtilityRoutePath.utility(this.utilityId) : composeDraft = null;
+
+  const UtilityRoutePath.compose(this.composeDraft) : utilityId = null;
 
   final String? utilityId;
+  final PlanningBoardDraft? composeDraft;
 
-  bool get isHome => utilityId == null;
+  bool get isHome => utilityId == null && composeDraft == null;
 }
 
 class UtilityRouteInformationParser
@@ -235,6 +239,13 @@ class UtilityRouteInformationParser
       return const UtilityRoutePath.home();
     }
 
+    if (segments.first == UtilityLink.composeHost) {
+      return UtilityRoutePath.compose(
+        UtilityLink.parseComposeDraft(routeInformation.uri.toString()) ??
+            const PlanningBoardDraft(),
+      );
+    }
+
     if (segments.length >= 2 && segments.first == UtilityLink.utilityHost) {
       return UtilityRoutePath.utility(segments[1]);
     }
@@ -244,6 +255,18 @@ class UtilityRouteInformationParser
 
   @override
   RouteInformation? restoreRouteInformation(UtilityRoutePath configuration) {
+    final composeDraft = configuration.composeDraft;
+    if (composeDraft != null) {
+      return RouteInformation(
+        uri: UtilityLink.forComposeDraft(
+          title: composeDraft.title,
+          prompt: composeDraft.prompt,
+          createdBy: composeDraft.createdBy,
+          participants: composeDraft.participants,
+        ),
+      );
+    }
+
     if (configuration.isHome) {
       return RouteInformation(uri: Uri(path: '/'));
     }
@@ -287,6 +310,8 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
             onOpenUtility: _appState.openUtility,
             onOpenLink: _appState.openUtilityLink,
             onCreateBoard: _appState.createPlanningBoard,
+            composeDraft: _appState.pendingComposeDraft,
+            onComposeDraftHandled: _appState.clearPendingComposeDraft,
           ),
         ),
         if (selectedUtility != null)

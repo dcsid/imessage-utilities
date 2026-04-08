@@ -1,4 +1,5 @@
 import 'package:chat_utilities_hub/src/models/create_planning_board_input.dart';
+import 'package:chat_utilities_hub/src/models/planning_board_draft.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/models/utility_kind.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
@@ -19,12 +20,16 @@ class HomeScreen extends StatefulWidget {
     required this.onOpenUtility,
     required this.onOpenLink,
     required this.onCreateBoard,
+    required this.composeDraft,
+    required this.onComposeDraftHandled,
   });
 
   final List<UtilityInstance> utilities;
   final ValueChanged<String> onOpenUtility;
   final bool Function(String rawLink) onOpenLink;
   final ValueChanged<CreatePlanningBoardInput> onCreateBoard;
+  final PlanningBoardDraft? composeDraft;
+  final VoidCallback onComposeDraftHandled;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -32,6 +37,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final TextEditingController _linkController;
+  String? _activeComposeDraftSignature;
 
   @override
   void initState() {
@@ -43,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
         kind: sampleUtility.kind.name,
       ).toString(),
     );
+    _scheduleComposeDraftIfNeeded();
   }
 
   @override
@@ -63,15 +70,49 @@ class _HomeScreenState extends State<HomeScreen> {
         kind: sampleUtility.kind.name,
       ).toString();
     }
+    if (oldWidget.composeDraft != null && widget.composeDraft == null) {
+      _activeComposeDraftSignature = null;
+    }
+    _scheduleComposeDraftIfNeeded();
   }
 
-  Future<void> _showCreateBoardSheet() async {
+  void _scheduleComposeDraftIfNeeded() {
+    final composeDraft = widget.composeDraft;
+    if (composeDraft == null) {
+      return;
+    }
+
+    final signature = _composeDraftSignature(composeDraft);
+    if (_activeComposeDraftSignature == signature) {
+      return;
+    }
+    _activeComposeDraftSignature = signature;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || widget.composeDraft == null) {
+        return;
+      }
+      _showCreateBoardSheet(
+        draft: widget.composeDraft,
+        clearComposeDraftWhenDone: true,
+      );
+    });
+  }
+
+  Future<void> _showCreateBoardSheet({
+    PlanningBoardDraft? draft,
+    bool clearComposeDraftWhenDone = false,
+  }) async {
     final result = await showModalBottomSheet<CreatePlanningBoardInput>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _CreatePlanningBoardSheet(),
+      builder: (context) => _CreatePlanningBoardSheet(draft: draft),
     );
+
+    if (clearComposeDraftWhenDone && mounted) {
+      widget.onComposeDraftHandled();
+    }
 
     if (result == null || !mounted) {
       return;
@@ -194,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 runSpacing: 12,
                 children: [
                   FilledButton.icon(
-                    onPressed: _showCreateBoardSheet,
+                    onPressed: () => _showCreateBoardSheet(),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: AppPalette.heroStart,
@@ -594,6 +635,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  String _composeDraftSignature(PlanningBoardDraft draft) {
+    return [
+      draft.title ?? '',
+      draft.prompt ?? '',
+      draft.createdBy ?? '',
+      draft.participants.join(','),
+    ].join('|');
+  }
 }
 
 class _HeroSidePanel extends StatelessWidget {
@@ -800,7 +850,9 @@ class _HighlightPanel extends StatelessWidget {
 }
 
 class _CreatePlanningBoardSheet extends StatefulWidget {
-  const _CreatePlanningBoardSheet();
+  const _CreatePlanningBoardSheet({this.draft});
+
+  final PlanningBoardDraft? draft;
 
   @override
   State<_CreatePlanningBoardSheet> createState() =>
@@ -821,14 +873,20 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _titleController = TextEditingController(text: 'Team dinner plan');
+    final draft = widget.draft;
+    _titleController = TextEditingController(
+      text: draft?.title ?? 'Team dinner plan',
+    );
     _promptController = TextEditingController(
       text:
+          draft?.prompt ??
           'Find the best overlap first, then use the same board to finish the event details.',
     );
-    _creatorController = TextEditingController(text: 'Maya');
+    _creatorController = TextEditingController(text: draft?.createdBy ?? 'Maya');
     _participantsController = TextEditingController(
-      text: 'Maya, Jordan, Ari, Nina, Chris',
+      text: draft != null && draft.participants.isNotEmpty
+          ? draft.participants.join(', ')
+          : 'Maya, Jordan, Ari, Nina, Chris',
     );
     _startDate = DateTime(now.year, now.month, now.day).add(
       const Duration(days: 1),

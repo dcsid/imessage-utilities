@@ -1,6 +1,7 @@
 import 'package:chat_utilities_hub/src/app.dart';
 import 'package:chat_utilities_hub/src/data/utility_repository.dart';
 import 'package:chat_utilities_hub/src/models/create_planning_board_input.dart';
+import 'package:chat_utilities_hub/src/models/planning_board_draft.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:flutter/foundation.dart';
@@ -11,8 +12,10 @@ class UtilityAppState extends ChangeNotifier {
 
   final UtilityRepository _repository;
   String? _selectedUtilityId;
+  PlanningBoardDraft? _pendingComposeDraft;
 
   List<UtilityInstance> get utilities => _repository.getAll();
+  PlanningBoardDraft? get pendingComposeDraft => _pendingComposeDraft;
 
   UtilityInstance? get selectedUtility {
     final selectedUtilityId = _selectedUtilityId;
@@ -23,6 +26,11 @@ class UtilityAppState extends ChangeNotifier {
   }
 
   UtilityRoutePath get currentPath {
+    final pendingComposeDraft = _pendingComposeDraft;
+    if (pendingComposeDraft != null) {
+      return UtilityRoutePath.compose(pendingComposeDraft);
+    }
+
     final selectedUtilityId = _selectedUtilityId;
     if (selectedUtilityId == null ||
         _repository.findById(selectedUtilityId) == null) {
@@ -33,6 +41,14 @@ class UtilityAppState extends ChangeNotifier {
   }
 
   void applyRoutePath(UtilityRoutePath routePath) {
+    final composeDraft = routePath.composeDraft;
+    if (composeDraft != null) {
+      _selectedUtilityId = null;
+      _pendingComposeDraft = composeDraft;
+      notifyListeners();
+      return;
+    }
+
     if (routePath.isHome) {
       showHome();
       return;
@@ -45,6 +61,7 @@ class UtilityAppState extends ChangeNotifier {
     }
 
     _selectedUtilityId = utilityId;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
@@ -54,12 +71,14 @@ class UtilityAppState extends ChangeNotifier {
     }
 
     _selectedUtilityId = utilityId;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
   void createPlanningBoard(CreatePlanningBoardInput input) {
     final utility = _repository.createPlanningBoard(input);
     _selectedUtilityId = utility.id;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
@@ -74,6 +93,7 @@ class UtilityAppState extends ChangeNotifier {
       selectedOptionIds: selectedOptionIds,
     );
     _selectedUtilityId = utility.id;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
@@ -83,6 +103,7 @@ class UtilityAppState extends ChangeNotifier {
       venueIndex: venueIndex,
     );
     _selectedUtilityId = utility.id;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
@@ -97,6 +118,7 @@ class UtilityAppState extends ChangeNotifier {
       detail: detail,
     );
     _selectedUtilityId = utility.id;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
@@ -109,6 +131,7 @@ class UtilityAppState extends ChangeNotifier {
       checklistIndex: checklistIndex,
     );
     _selectedUtilityId = utility.id;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
@@ -123,25 +146,48 @@ class UtilityAppState extends ChangeNotifier {
       assignee: assignee,
     );
     _selectedUtilityId = utility.id;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 
   bool openUtilityLink(String rawLink) {
     final utilityId = UtilityLink.parseUtilityId(rawLink);
-    if (utilityId == null || _repository.findById(utilityId) == null) {
+    if (utilityId != null) {
+      if (_repository.findById(utilityId) == null) {
+        return false;
+      }
+
+      openUtility(utilityId);
+      return true;
+    }
+
+    final composeDraft = UtilityLink.parseComposeDraft(rawLink);
+    if (composeDraft == null) {
       return false;
     }
 
-    openUtility(utilityId);
+    _selectedUtilityId = null;
+    _pendingComposeDraft = composeDraft;
+    notifyListeners();
     return true;
   }
 
+  void clearPendingComposeDraft() {
+    if (_pendingComposeDraft == null) {
+      return;
+    }
+
+    _pendingComposeDraft = null;
+    notifyListeners();
+  }
+
   void showHome() {
-    if (_selectedUtilityId == null) {
+    if (_selectedUtilityId == null && _pendingComposeDraft == null) {
       return;
     }
 
     _selectedUtilityId = null;
+    _pendingComposeDraft = null;
     notifyListeners();
   }
 }

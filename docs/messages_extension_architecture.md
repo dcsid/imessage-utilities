@@ -1,6 +1,6 @@
 # Messages Extension Architecture
 
-This repository now contains the Flutter-heavy planner for a future `When2Meet + iMessage` product.
+This repository now contains the Flutter-heavy planner for a `When2Meet + iMessage` product, plus a thin native Messages extension shell.
 
 ## Current split
 
@@ -8,9 +8,10 @@ This repository now contains the Flutter-heavy planner for a future `When2Meet +
   - cross-platform planning surface for iPhone, Android, desktop, and web
   - full availability board, venue shortlist, checklist, and richer detail flows
   - the main product logic stays in Dart
-- `Future native iOS Messages extension`
-  - thin chat-native composer and response UI
-  - launches the Flutter app through a utility link when someone needs the full board
+- `Native iOS Messages extension`
+  - thin chat-native composer for a planning draft
+  - inserts a Messages card with a compose handoff link
+  - launches the Flutter app when someone needs the full board
 - `Future AWS backend`
   - shared planning records, membership, responses, notifications, and analytics
 
@@ -28,11 +29,15 @@ The app is ready to parse links shaped like:
 
 `chatutilitieshub://utility/<utility-id>?kind=availability`
 
-That gives the future Messages extension a stable handoff target before we wire in a backend or universal-link domain.
+And compose drafts shaped like:
+
+`chatutilitieshub://compose?title=<title>&createdBy=<name>&participants=<csv>`
+
+That gives the Messages extension a stable handoff target before we wire in a backend or universal-link domain.
 
 ## Recommended next build steps
 
-1. Add create/respond flows for the availability board instead of seeded sample data.
+1. Let the Messages extension open an existing board or recent board list once the app has shared state or backend storage.
 2. Replace the in-memory repository with Amplify/AWS-backed reads and writes.
-3. Add a native iOS Messages extension target in Xcode that creates planning links and opens the app when needed.
+3. Add a lightweight response mode inside the extension for simple availability taps before opening Flutter.
 4. Introduce a lightweight web fallback so non-installed recipients can still respond.

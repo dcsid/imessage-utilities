@@ -1,6 +1,6 @@
 # iMessage Utilities
 
-A Flutter-first event planning app built around a real `When2Meet`-style availability board, with future iMessage integration as the fastest sharing surface.
+A Flutter-first event planning app built around a real `When2Meet`-style availability board, with a thin native iMessage draft extension handing the full flow into Flutter.
 
 This slice now treats scheduling as the main product, then layers in the planning tools that normally come right after: venue voting, reminders, and guest updates.
 
@@ -11,10 +11,11 @@ This slice now treats scheduling as the main product, then layers in the plannin
   - seeded `When2Meet`-style board plus create-your-own planning boards
   - live availability responses with overlap scoring
   - venue voting and checklist actions on the same event board
-  - deep-link routing for Messages handoff
-- `Future native iMessage extension`
-  - compact in-chat creation and response UI
-  - launches the Flutter planner for deeper workflows
+  - deep-link routing for Messages handoff and compose drafts
+- `Native iMessage extension`
+  - compact in-chat composer for title, organizer, and participants
+  - inserts a planning card into the thread
+  - opens the Flutter planner to finish creating the board
 - `Future AWS backend`
   - auth, shared plan records, responses, notifications, and analytics
 
@@ -31,11 +32,15 @@ You can also run it in Chrome:
 flutter run -d chrome
 ```
 
-## Current deep link
+## Current deep links
 
 The app is ready to open utility links like:
 
 `chatutilitieshub://utility/spring-launch-dinner?kind=availability`
+
+And Messages compose drafts like:
+
+`chatutilitieshub://compose?title=Game%20Night&createdBy=Maya&participants=Maya,Jordan,Ari`
 
 ## Current product slice
 
@@ -44,7 +49,8 @@ The app is ready to open utility links like:
 - review ranked overlap to find the best slot
 - vote on venue options without leaving the event
 - add checklist tasks and mark them complete
-- use the same deep-link contract the future iMessage extension will send
+- open a prefilled create-board flow from an iMessage draft link
+- use the same deep-link contract the native Messages extension now sends
 
 ## Verification
 
@@ -55,7 +61,7 @@ flutter test
 
 ## Notes
 
-- The iMessage extension is still a future native iOS shell.
+- The iMessage extension target now exists under [ios/MessagesExtension/Info.plist]([redacted-path] and [ios/MessagesExtension/MessagesViewController.swift]([redacted-path]
 - Most product logic and UI stay in Flutter and Dart.
 - AWS/Amplify integration is not wired yet.
 - A mobile web fallback for non-installed recipients is still planned.
