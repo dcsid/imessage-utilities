@@ -4,6 +4,7 @@ import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:chat_utilities_hub/src/presentation/app_backdrop.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/app_surface.dart';
+import 'package:chat_utilities_hub/src/presentation/availability_board.dart';
 import 'package:chat_utilities_hub/src/presentation/date_labels.dart';
 import 'package:chat_utilities_hub/src/presentation/section_header.dart';
 import 'package:chat_utilities_hub/src/presentation/utility_kind_style.dart';
@@ -64,28 +65,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildHero(featuredUtility),
                   const SizedBox(height: 28),
                   const SectionHeader(
-                    eyebrow: 'Live utility',
-                    title: 'Messages-first utility hub',
+                    eyebrow: 'Availability first',
+                    title: 'Plan around the scheduling board',
                     description:
-                        'The app starts with a When2Meet-style flow, but the shell is generic enough to become a broader toolkit for chat-native coordination.',
+                        'The core product is a full When2Meet-style planning board. Venue choice, guest updates, and reminders sit around the same event instead of becoming separate apps.',
                   ),
                   const SizedBox(height: 18),
                   ...widget.utilities.map(_buildUtilityCard),
                   const SizedBox(height: 28),
                   const SectionHeader(
-                    eyebrow: 'Deep link handoff',
-                    title: 'Try a share link',
+                    eyebrow: 'Messages handoff',
+                    title: 'Preview the iMessage handoff',
                     description:
-                        'This simulates the handoff a native iMessage extension will use to drop people into the richer Flutter experience.',
+                        'The native Messages extension stays thin. It creates the availability board in chat, then hands people into this richer Flutter planner when they need the full board.',
                   ),
                   const SizedBox(height: 18),
                   _buildLinkPreviewCard(),
                   const SizedBox(height: 28),
                   const SectionHeader(
-                    eyebrow: 'Future modules',
-                    title: 'Expansion path',
+                    eyebrow: 'Event planning extras',
+                    title: 'Built around the schedule',
                     description:
-                        'Availability is just the first utility. The same structure can host more group-decision tools once the Messages extension and backend are wired in.',
+                        'Scheduling is the hero, but a good event planner also needs a venue vote, a checklist, and guest communication tied to the same plan.',
                   ),
                   const SizedBox(height: 18),
                   _buildFutureUtilities(),
@@ -133,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  'Messages-first utility hub',
+                  'When2Meet plus iMessage',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: Colors.white,
                     letterSpacing: 0.2,
@@ -142,14 +143,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 18),
               Text(
-                'Build the kind of utility people actually use mid-conversation.',
+                'Plan the event in chat, then open the full board in Flutter.',
                 style: theme.textTheme.displayMedium?.copyWith(
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 14),
               Text(
-                'This prototype pairs a future native iMessage extension with a richer Flutter companion app, starting with availability overlap and leaving room for polls, picks, and checklists later.',
+                'This product starts as a real availability planner people could use even without Messages. The iMessage extension becomes the fastest way to create and share the board inside a group thread.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: Colors.white.withValues(alpha: 0.88),
                   height: 1.5,
@@ -167,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       foregroundColor: AppPalette.heroMiddle,
                     ),
                     icon: const Icon(Icons.open_in_new_rounded),
-                    label: const Text('Open availability prototype'),
+                    label: const Text('Open planning board'),
                   ),
                   OutlinedButton.icon(
                     onPressed: _previewLink,
@@ -178,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     icon: const Icon(Icons.arrow_outward_rounded),
-                    label: const Text('Preview share-link handoff'),
+                    label: const Text('Preview iMessage handoff'),
                   ),
                 ],
               ),
@@ -188,12 +189,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 runSpacing: 12,
                 children: [
                   _HeroMetric(
-                    label: 'Response rate',
+                    label: 'Reply rate',
                     value: '${(responseRate * 100).round()}%',
                   ),
                   _HeroMetric(
-                    label: 'Future modules',
-                    value: '${UtilityKind.values.length - 1}',
+                    label: 'Time windows',
+                    value: '${utility.options.length}',
                   ),
                   _HeroMetric(
                     label: 'Best slot',
@@ -291,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      utility.prompt,
+                      utility.eventSummary,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: AppPalette.mutedText,
                         height: 1.5,
@@ -327,11 +328,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            '$pending people still need to respond before the thread reaches full overlap.',
+            '$pending people still need to respond before the event time is safe to lock.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppPalette.mutedText,
             ),
           ),
+          const SizedBox(height: 22),
+          AvailabilityBoard(utility: utility, accent: accent, compact: true),
           const SizedBox(height: 22),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -340,16 +343,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'Best overlap right now',
                 value: formatUtilityOption(topScore.option),
                 description:
-                    '${topScore.votes} of ${utility.participants.length} people can make this slot.',
+                    '${topScore.votes} of ${utility.participants.length} people can make this slot, so this is the strongest candidate to send back to Messages.',
                 accent: accent,
                 icon: Icons.auto_awesome_rounded,
               );
               final shareCard = _HighlightPanel(
-                title: 'Share-ready handoff',
+                title: 'Messages-ready handoff',
                 value: shareUri,
                 description: utility.closesAt == null
-                    ? 'Openable by the companion app today and the future Messages extension later.'
-                    : 'Closes ${formatDeadline(utility.closesAt!)}.',
+                    ? 'Openable by the Flutter planner today and the native Messages extension once that shell is wired in.'
+                    : 'The current response window closes ${formatDeadline(utility.closesAt!)}.',
                 accent: AppPalette.heroMiddle,
                 icon: Icons.link_rounded,
                 monospaceValue: true,
@@ -383,12 +386,12 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Use this while demoing on desktop.',
+            'Use this until the Messages composer is fully wired in.',
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
-            'System-level Messages handoff is still future work, but this lets you simulate the exact utility-link contract inside the companion app today.',
+            'The link below is the same contract the native iMessage extension will send. It keeps the planning flow mostly in Flutter and Dart while letting Messages own the quick in-chat entry point.',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: AppPalette.mutedText,
               height: 1.5,
@@ -406,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Utility link',
+                  'Planning link',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppPalette.mutedText,
                     letterSpacing: 0.2,
@@ -423,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Tap and hold to select, or use the actions below.',
+                  'Tap and hold to select it, or use the actions below.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppPalette.mutedText,
                   ),
@@ -442,12 +445,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: AppPalette.heroMiddle,
                 ),
                 icon: const Icon(Icons.link_rounded),
-                label: const Text('Preview linked utility'),
+                label: const Text('Open planning board'),
               ),
               OutlinedButton.icon(
                 onPressed: _copySampleLink,
                 icon: const Icon(Icons.copy_rounded),
-                label: const Text('Copy sample link'),
+                label: const Text('Copy planning link'),
               ),
             ],
           ),
@@ -519,7 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           _CapsuleTag(
-            label: 'Designed to plug into the same shell',
+            label: 'Built for the same planning board',
             accent: accent,
           ),
         ],
@@ -535,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Sample link copied.')));
+    ).showSnackBar(const SnackBar(content: Text('Planning link copied.')));
   }
 
   void _previewLink() {
@@ -546,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('That link does not match a known utility yet.'),
+        content: Text('That link does not match a known planning board yet.'),
       ),
     );
   }
@@ -575,7 +578,7 @@ class _HeroSidePanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Live prototype',
+            'Live planning board',
             style: theme.textTheme.labelLarge?.copyWith(
               color: Colors.white.withValues(alpha: 0.82),
             ),
@@ -595,7 +598,7 @@ class _HeroSidePanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${topScore.votes} people overlap here right now.',
+            '${topScore.votes} people overlap here right now. Venue voting comes next.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.8),
             ),

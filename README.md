@@ -1,20 +1,21 @@
 # iMessage Utilities
 
-A Flutter companion app for a future Messages-first utility product.
+A Flutter-first event planning app built around a real `When2Meet`-style availability board, with future iMessage integration as the fastest sharing surface.
 
-This first slice is centered on a `When2Meet`-style availability utility, but the app is structured around a reusable `utility` model so we can expand into polls, checklists, and other group-chat tools later.
+This slice now treats scheduling as the main product, then layers in the planning tools that normally come right after: venue voting, reminders, and guest updates.
 
 ## Current architecture
 
 - `Flutter app`
-  - cross-platform companion app for iPhone, Android, desktop, and web
-  - seeded availability prototype
-  - deep-link routing for utility handoff
+  - cross-platform planner for iPhone, Android, desktop, and web
+  - seeded `When2Meet`-style board
+  - event-planning modules around the same board
+  - deep-link routing for Messages handoff
 - `Future native iMessage extension`
-  - compact in-chat utility UI
-  - launches the app for deeper workflows
+  - compact in-chat creation and response UI
+  - launches the Flutter planner for deeper workflows
 - `Future AWS backend`
-  - auth, shared utility records, responses, notifications, and analytics
+  - auth, shared plan records, responses, notifications, and analytics
 
 ## Run locally
 
@@ -33,7 +34,7 @@ flutter run -d chrome
 
 The app is ready to open utility links like:
 
-`chatutilitieshub://utility/design-sprint-sync?kind=availability`
+`chatutilitieshub://utility/spring-launch-dinner?kind=availability`
 
 ## Verification
 
@@ -44,6 +45,7 @@ flutter test
 
 ## Notes
 
-- The iMessage extension is not built yet.
+- The iMessage extension is still a future native iOS shell.
+- Most product logic and UI stay in Flutter and Dart.
 - AWS/Amplify integration is not wired yet.
 - A mobile web fallback for non-installed recipients is still planned.

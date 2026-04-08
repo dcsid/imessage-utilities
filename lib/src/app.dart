@@ -119,7 +119,7 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
     );
 
     return MaterialApp.router(
-      title: 'Chat Utilities Hub',
+      title: 'Plan Together',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: colorScheme,

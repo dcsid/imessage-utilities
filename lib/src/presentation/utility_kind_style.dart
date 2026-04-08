@@ -10,7 +10,7 @@ Color utilityKindColor(UtilityKind kind) {
     case UtilityKind.checklist:
       return const Color(0xFF34C759);
     case UtilityKind.picks:
-      return const Color(0xFFAF52DE);
+      return const Color(0xFF5AC8FA);
   }
 }
 
@@ -19,10 +19,10 @@ IconData utilityKindIcon(UtilityKind kind) {
     case UtilityKind.availability:
       return Icons.calendar_view_week_rounded;
     case UtilityKind.poll:
-      return Icons.poll_rounded;
+      return Icons.restaurant_rounded;
     case UtilityKind.checklist:
       return Icons.checklist_rounded;
     case UtilityKind.picks:
-      return Icons.local_activity_rounded;
+      return Icons.forum_rounded;
   }
 }

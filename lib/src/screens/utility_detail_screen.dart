@@ -4,6 +4,7 @@ import 'package:chat_utilities_hub/src/models/utility_response.dart';
 import 'package:chat_utilities_hub/src/presentation/app_backdrop.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/app_surface.dart';
+import 'package:chat_utilities_hub/src/presentation/availability_board.dart';
 import 'package:chat_utilities_hub/src/presentation/date_labels.dart';
 import 'package:chat_utilities_hub/src/presentation/section_header.dart';
 import 'package:chat_utilities_hub/src/presentation/utility_kind_style.dart';
@@ -95,7 +96,7 @@ class UtilityDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            'Created by ${utility.createdBy}. Shared into Messages as a compact utility card, with the companion app handling deeper edits, history, and future utility types.',
+                            '${utility.eventSummary} Created by ${utility.createdBy}, with Messages acting as the quick-create surface and Flutter handling the full planning board.',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               color: Colors.white.withValues(alpha: 0.88),
                               height: 1.5,
@@ -172,10 +173,21 @@ class UtilityDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 const SectionHeader(
+                  eyebrow: 'When2Meet board',
+                  title: 'Availability grid',
+                  description:
+                      'This is the main product surface: a full overlap board people can open from Messages, mobile, or desktop before any other event-planning step happens.',
+                ),
+                const SizedBox(height: 18),
+                AppSurface(
+                  child: AvailabilityBoard(utility: utility, accent: accent),
+                ),
+                const SizedBox(height: 28),
+                const SectionHeader(
                   eyebrow: 'Ranked schedule overlap',
                   title: 'Best overlap',
                   description:
-                      'Each slot is scored by how many people selected it, which keeps the current MVP aligned with a When2Meet-style decision flow.',
+                      'The ranked view makes it easy to summarize the strongest options back into iMessage after people fill in the board.',
                 ),
                 const SizedBox(height: 18),
                 ...utility.optionScores.map(
@@ -187,10 +199,19 @@ class UtilityDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 28),
                 const SectionHeader(
+                  eyebrow: 'Event planning stack',
+                  title: 'Venue vote and checklist',
+                  description:
+                      'Time overlap is the hero, but the same plan should also hold the next decisions that keep an event moving.',
+                ),
+                const SizedBox(height: 18),
+                _buildPlanningTools(context),
+                const SizedBox(height: 28),
+                const SectionHeader(
                   eyebrow: 'Shared group',
                   title: 'Participants',
                   description:
-                      'This section becomes reusable once the app expands beyond availability into other lightweight utilities.',
+                      'Everyone stays tied to the same planning board so headcount, overlap, and final details never drift apart.',
                 ),
                 const SizedBox(height: 18),
                 AppSurface(
@@ -209,35 +230,88 @@ class UtilityDetailScreen extends StatelessWidget {
                   eyebrow: 'Current submissions',
                   title: 'Responses',
                   description:
-                      'The app already exposes the response details the future backend and Messages extension will synchronize.',
+                      'These are the selections the native Messages surface and the Flutter planning app will both read from the same backend later on.',
                 ),
                 const SizedBox(height: 18),
                 _buildResponses(context),
-                const SizedBox(height: 16),
-                AppSurface(
-                  fillColor: Colors.white.withValues(alpha: 0.68),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Future expansion stays inside the same shell',
-                        style: theme.textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Because this screen is backed by a generic utility model rather than a hard-coded schedule view, it can grow into polls, shared checklists, and group picks once the native Messages extension begins sending those utility links.',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: AppPalette.mutedText,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 28),
+                const SectionHeader(
+                  eyebrow: 'Messages-native flow',
+                  title: 'iMessage integration path',
+                  description:
+                      'The extension should stay lightweight: create in chat, respond quickly, then open this full board only when someone needs the richer planner.',
                 ),
+                const SizedBox(height: 18),
+                _buildIntegrationFlow(context),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPlanningTools(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth > 960
+            ? (constraints.maxWidth - 12) / 2
+            : constraints.maxWidth;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: AppSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Venue shortlist',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 10),
+                    ...utility.venueOptions.map(
+                      (option) => _PlanningVenueRow(option: option),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: AppSurface(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Checklist',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 10),
+                    ...utility.checklistItems.map(
+                      (item) => _ChecklistRow(item: item),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildIntegrationFlow(BuildContext context) {
+    return AppSurface(
+      fillColor: Colors.white.withValues(alpha: 0.72),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: utility.planningUpdates
+            .map((update) => _PlanningUpdateRow(update: update))
+            .toList(growable: false),
       ),
     );
   }
@@ -277,7 +351,7 @@ class UtilityDetailScreen extends StatelessWidget {
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Utility link copied.')));
+    ).showSnackBar(const SnackBar(content: Text('Planning link copied.')));
   }
 }
 
@@ -468,6 +542,178 @@ class _ParticipantChip extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanningVenueRow extends StatelessWidget {
+  const _PlanningVenueRow({required this.option});
+
+  final PlanningVenueOption option;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppPalette.surfaceSoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppPalette.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF9F0A).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.restaurant_rounded,
+              color: Color(0xFFFF9F0A),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(option.name, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(
+                  option.detail,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppPalette.mutedText,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '${option.votes}',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: const Color(0xFFFF9F0A),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistRow extends StatelessWidget {
+  const _ChecklistRow({required this.item});
+
+  final PlanningChecklistItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = item.isComplete ? AppPalette.lime : AppPalette.gold;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppPalette.surfaceSoft,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppPalette.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              item.isComplete ? Icons.check_rounded : Icons.schedule_rounded,
+              color: accent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Owner: ${item.assignee}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppPalette.mutedText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanningUpdateRow extends StatelessWidget {
+  const _PlanningUpdateRow({required this.update});
+
+  final PlanningUpdate update;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppPalette.heroMiddle.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.chat_bubble_outline_rounded,
+              color: AppPalette.heroMiddle,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(update.title, style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Text(
+                  update.detail,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppPalette.mutedText,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

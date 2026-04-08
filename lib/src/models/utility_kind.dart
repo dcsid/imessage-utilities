@@ -1,19 +1,19 @@
 enum UtilityKind {
   availability(
-    label: 'Availability',
-    blurb: 'Find overlap quickly from inside a chat thread.',
+    label: 'When2Meet board',
+    blurb: 'Shared availability grid for locking the event time first.',
   ),
   poll(
-    label: 'Polls',
-    blurb: 'Fast picks for yes/no or multiple-choice decisions.',
+    label: 'Venue vote',
+    blurb: 'Choose the restaurant, house, or activity after time overlap is clear.',
   ),
   checklist(
-    label: 'Checklists',
-    blurb: 'Shared lightweight coordination for plans and trips.',
+    label: 'Planning checklist',
+    blurb: 'Track reminders, supplies, and day-of tasks without leaving the plan.',
   ),
   picks(
-    label: 'Group picks',
-    blurb: 'Restaurants, movies, and activities that need a winner.',
+    label: 'Guest updates',
+    blurb: 'Keep final headcount, notes, and changes tied to the same event board.',
   );
 
   const UtilityKind({required this.label, required this.blurb});

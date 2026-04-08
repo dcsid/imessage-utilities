@@ -3,37 +3,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('shows the availability-first utility hub', (tester) async {
+  testWidgets('shows the availability-first planner', (tester) async {
     await tester.pumpWidget(const ChatUtilitiesHubApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Messages-first utility hub'), findsOneWidget);
-    expect(find.text('Design sprint sync'), findsOneWidget);
+    expect(
+      find.text('Plan the event in chat, then open the full board in Flutter.'),
+      findsOneWidget,
+    );
+    expect(find.text('Spring launch dinner'), findsWidgets);
 
     await tester.scrollUntilVisible(
-      find.text('Try a share link'),
+      find.text('Preview the iMessage handoff'),
       400,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Try a share link'), findsOneWidget);
+    expect(find.text('Preview the iMessage handoff'), findsOneWidget);
   });
 
   testWidgets('opens a utility from a launch link', (tester) async {
     await tester.pumpWidget(
       const ChatUtilitiesHubApp(
         initialLink:
-            'chatutilitieshub://utility/design-sprint-sync?kind=availability',
+            'chatutilitieshub://utility/spring-launch-dinner?kind=availability',
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Best overlap'), findsOneWidget);
-    expect(find.text('Design sprint sync'), findsWidgets);
-    expect(
-      find.textContaining('chatutilitieshub://utility/design-sprint-sync'),
-      findsOneWidget,
+    await tester.scrollUntilVisible(
+      find.text('Availability grid'),
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Venue vote and checklist'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Spring launch dinner'), findsWidgets);
+    expect(find.text('Venue vote and checklist'), findsOneWidget);
   });
 }
