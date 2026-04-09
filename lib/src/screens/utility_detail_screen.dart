@@ -1,3 +1,5 @@
+import 'package:chat_utilities_hub/src/models/geo_point.dart';
+import 'package:chat_utilities_hub/src/models/location_share_mode.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:chat_utilities_hub/src/models/utility_response.dart';
@@ -6,6 +8,7 @@ import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/app_surface.dart';
 import 'package:chat_utilities_hub/src/presentation/availability_board.dart';
 import 'package:chat_utilities_hub/src/presentation/date_labels.dart';
+import 'package:chat_utilities_hub/src/presentation/trip_planning_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -15,6 +18,9 @@ class UtilityDetailScreen extends StatefulWidget {
     required this.utility,
     required this.onBack,
     required this.onSaveResponse,
+    required this.onAddTripStop,
+    required this.onSaveLocationShare,
+    required this.onEndLocationShare,
   });
 
   final UtilityInstance utility;
@@ -25,6 +31,25 @@ class UtilityDetailScreen extends StatefulWidget {
     required Set<String> selectedOptionIds,
   })
   onSaveResponse;
+  final void Function({
+    required String utilityId,
+    required String title,
+    required GeoPoint position,
+    String? note,
+  })
+  onAddTripStop;
+  final void Function({
+    required String utilityId,
+    required String participantName,
+    required LocationShareMode mode,
+    required String stopId,
+  })
+  onSaveLocationShare;
+  final void Function({
+    required String utilityId,
+    required String participantName,
+  })
+  onEndLocationShare;
 
   @override
   State<UtilityDetailScreen> createState() => _UtilityDetailScreenState();
@@ -119,7 +144,20 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
                           ),
                         )
                         .toList(growable: false),
-                  ),
+                      ),
+                ),
+                const SizedBox(height: 20),
+                const _SectionTitle(
+                  title: 'Trip map',
+                  subtitle:
+                      'Plan the route visually, add the places the group is heading to, and let people optionally share where they are during the outing.',
+                ),
+                const SizedBox(height: 12),
+                TripPlanningPanel(
+                  utility: utility,
+                  onAddTripStop: widget.onAddTripStop,
+                  onSaveLocationShare: widget.onSaveLocationShare,
+                  onEndLocationShare: widget.onEndLocationShare,
                 ),
                 const SizedBox(height: 20),
                 LayoutBuilder(
@@ -210,6 +248,14 @@ class _OverviewCard extends StatelessWidget {
               _OverviewStat(
                 label: 'Waiting on',
                 value: '${utility.pendingResponseCount}',
+              ),
+              _OverviewStat(
+                label: 'Places',
+                value: '${utility.stopCount}',
+              ),
+              _OverviewStat(
+                label: 'Sharing',
+                value: '${utility.activeLocationShareCount}',
               ),
               if (utility.closesAt != null)
                 _OverviewStat(

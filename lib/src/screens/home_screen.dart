@@ -74,7 +74,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'A minimal weekly availability board for finding overlap fast. Create a board, share it, and let everyone drag their time directly onto the same schedule.',
+                'A minimal group outing planner: find overlap fast, map the stops you care about, and keep optional location sharing simple.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: AppPalette.mutedText,
                   height: 1.5,
@@ -198,6 +198,7 @@ class _BoardCard extends StatelessWidget {
                         '${utility.responseCount}/${utility.participants.length} responded',
                   ),
                   _MetricPill(label: bestOverlap),
+                  _MetricPill(label: '${utility.stopCount} places'),
                   _MetricPill(label: 'Created by ${utility.createdBy}'),
                 ],
               ),
@@ -338,7 +339,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Start with a clean weekly board and invite people to fill in their availability.',
+            'Start with a clean weekly board, then add the places your outing needs once the timing is clear.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: AppPalette.mutedText,
               height: 1.5,

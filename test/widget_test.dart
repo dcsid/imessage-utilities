@@ -2,6 +2,7 @@ import 'package:chat_utilities_hub/src/app.dart';
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
 import 'package:chat_utilities_hub/src/models/create_planning_board_input.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
+import 'package:chat_utilities_hub/src/presentation/trip_planning_panel.dart';
 import 'package:chat_utilities_hub/src/screens/utility_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,95 @@ InMemoryUtilityRepository createTestRepository() {
 
 UtilityInstance createTestBoard(InMemoryUtilityRepository repository) {
   return repository.getAll().first;
+}
+
+class _TripPlanningHarness extends StatefulWidget {
+  const _TripPlanningHarness({
+    required this.repository,
+    required this.boardId,
+  });
+
+  final InMemoryUtilityRepository repository;
+  final String boardId;
+
+  @override
+  State<_TripPlanningHarness> createState() => _TripPlanningHarnessState();
+}
+
+class _TripPlanningHarnessState extends State<_TripPlanningHarness> {
+  late UtilityInstance _utility;
+
+  @override
+  void initState() {
+    super.initState();
+    _utility = widget.repository.getAll().firstWhere(
+      (utility) => utility.id == widget.boardId,
+    );
+  }
+
+  void _refresh() {
+    setState(() {
+      _utility = widget.repository.getAll().firstWhere(
+        (utility) => utility.id == widget.boardId,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: TripPlanningPanel(
+                utility: _utility,
+                onAddTripStop: ({
+                  required utilityId,
+                  required title,
+                  required position,
+                  String? note,
+                }) {
+                  widget.repository.addTripStop(
+                    utilityId: utilityId,
+                    title: title,
+                    position: position,
+                    note: note,
+                  );
+                  _refresh();
+                },
+                onSaveLocationShare: ({
+                  required utilityId,
+                  required participantName,
+                  required mode,
+                  required stopId,
+                }) {
+                  widget.repository.saveLocationShare(
+                    utilityId: utilityId,
+                    participantName: participantName,
+                    mode: mode,
+                    stopId: stopId,
+                  );
+                  _refresh();
+                },
+                onEndLocationShare: ({
+                  required utilityId,
+                  required participantName,
+                }) {
+                  widget.repository.endLocationShare(
+                    utilityId: utilityId,
+                    participantName: participantName,
+                  );
+                  _refresh();
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 void main() {
@@ -172,5 +262,32 @@ void main() {
     final endingOffset = pageScrollState.position.pixels;
     expect((endingOffset - startingOffset).abs(), lessThan(1));
     expect(find.text('0 blocks selected'), findsNothing);
+  });
+
+  testWidgets('adds a planned place from the trip map', (tester) async {
+    final repository = createTestRepository();
+    final board = createTestBoard(repository);
+
+    await tester.pumpWidget(
+      _TripPlanningHarness(
+        repository: repository,
+        boardId: board.id,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tripMap = find.byKey(const ValueKey('trip-map-surface'));
+    expect(tripMap, findsOneWidget);
+    await tester.pumpAndSettle();
+
+    await tester.longPress(tripMap);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, 'Coffee meetup');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save place'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coffee meetup'), findsOneWidget);
   });
 }
