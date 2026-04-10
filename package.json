@@ -1,0 +1,40 @@
+{
+  "name": "flutter-time-capsule-app",
+  "version": "1.0.0",
+  "description": "An iPhone-first Flutter availability planner built around a `When2Meet`-style weekly board.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "amplify:configure": "./scripts/ampx.sh configure profile",
+    "amplify:sandbox": "./scripts/ampx.sh sandbox --outputs-format dart --outputs-out-dir lib",
+    "amplify:deploy": "./scripts/ampx.sh pipeline-deploy --outputs-format dart --outputs-out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dcsid/imessage-utilities.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/dcsid/imessage-utilities/issues"
+  },
+  "homepage": "https://github.com/dcsid/imessage-utilities#readme",
+  "dependencies": {
+    "aws-amplify": "^6.16.3"
+  },
+  "devDependencies": {
+    "@aws-amplify/backend": "^1.22.0",
+    "@aws-amplify/backend-cli": "^1.8.2",
+    "aws-cdk-lib": "^2.234.1",
+    "constructs": "^10.6.0",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

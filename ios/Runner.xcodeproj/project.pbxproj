@@ -201,6 +201,7 @@
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
+				8975955BEFD8A4DD2D7F8E26 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -288,6 +289,23 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
 		};
+		8975955BEFD8A4DD2D7F8E26 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 		902C02C5BA1B791227F98692 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -323,7 +341,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+			shellScript = "# Strip com.apple.provenance to fix codesign on iCloud-synced dirs (macOS 26+)\nfind \"${BUILT_PRODUCTS_DIR}\" -name '*.framework' -exec xattr -cr {} \\; 2>/dev/null || true\nfind \"$FLUTTER_ROOT/bin/cache/artifacts/engine\" -name 'Flutter' -path '*/Flutter.framework/Flutter' -exec bash -c 'cp \"$1\" \"$1.tmp\" && cat \"$1.tmp\" > \"$1\" && rm \"$1.tmp\"' _ {} \\; 2>/dev/null || true\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build\n# Strip again after build in case new frameworks were copied\nfind \"${BUILT_PRODUCTS_DIR}\" -name '*.framework' -exec xattr -cr {} \\; 2>/dev/null || true\n";
 		};
 		C52BB300C6B54710030879D9 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -459,7 +477,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 7DM79W3ADL;
 				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = Runner/Info-Debug.plist;
+				INFOPLIST_FILE = "Runner/Info-Debug.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

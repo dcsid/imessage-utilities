@@ -15,11 +15,15 @@ class HomeScreen extends StatelessWidget {
     required this.utilities,
     required this.onOpenUtility,
     required this.onCreateBoard,
+    this.userEmail,
+    this.onSignOut,
   });
 
   final List<UtilityInstance> utilities;
   final ValueChanged<String> onOpenUtility;
   final ValueChanged<CreatePlanningBoardInput> onCreateBoard;
+  final String? userEmail;
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -87,11 +91,12 @@ class HomeScreen extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              FilledButton.icon(
-                onPressed: () => _showCreateBoardSheet(context),
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Create board'),
-              ),
+              if (userEmail != null)
+                OutlinedButton.icon(
+                  onPressed: onSignOut,
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(userEmail!),
+                ),
             ],
           );
 
@@ -124,12 +129,30 @@ class HomeScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _CreatePlanningBoardSheet(),
+      builder: (context) =>
+          _CreatePlanningBoardSheet(initialOwner: _defaultOwnerName(userEmail)),
     );
 
     if (result != null && context.mounted) {
       onCreateBoard(result);
     }
+  }
+
+  static String? _defaultOwnerName(String? userEmail) {
+    if (userEmail == null || userEmail.isEmpty) {
+      return null;
+    }
+
+    final localPart = userEmail.split('@').first.trim();
+    if (localPart.isEmpty) {
+      return userEmail;
+    }
+
+    return localPart
+        .split(RegExp(r'[._-]+'))
+        .where((chunk) => chunk.isNotEmpty)
+        .map((chunk) => '${chunk[0].toUpperCase()}${chunk.substring(1)}')
+        .join(' ');
   }
 
   Future<void> _copyBoardLink(
@@ -358,7 +381,9 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _CreatePlanningBoardSheet extends StatefulWidget {
-  const _CreatePlanningBoardSheet();
+  const _CreatePlanningBoardSheet({this.initialOwner});
+
+  final String? initialOwner;
 
   @override
   State<_CreatePlanningBoardSheet> createState() =>
@@ -378,7 +403,7 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
   void initState() {
     super.initState();
     _titleController = TextEditingController();
-    _createdByController = TextEditingController();
+    _createdByController = TextEditingController(text: widget.initialOwner);
     _participantsController = TextEditingController();
   }
 

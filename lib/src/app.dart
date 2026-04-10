@@ -1,3 +1,5 @@
+import 'package:chat_utilities_hub/src/auth/auth_controller.dart';
+import 'package:chat_utilities_hub/src/auth/auth_screen.dart';
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
 import 'package:chat_utilities_hub/src/data/utility_repository.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
@@ -8,16 +10,23 @@ import 'package:chat_utilities_hub/src/state/utility_app_state.dart';
 import 'package:flutter/material.dart';
 
 class ChatUtilitiesHubApp extends StatefulWidget {
-  const ChatUtilitiesHubApp({super.key, this.initialLink, this.repository});
+  const ChatUtilitiesHubApp({
+    super.key,
+    this.initialLink,
+    this.repository,
+    this.authenticationEnabled = false,
+  });
 
   final String? initialLink;
   final UtilityRepository? repository;
+  final bool authenticationEnabled;
 
   @override
   State<ChatUtilitiesHubApp> createState() => _ChatUtilitiesHubAppState();
 }
 
 class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
+  late final AuthController _authController;
   late final UtilityAppState _appState;
   late final UtilityRouterDelegate _routerDelegate;
   PlatformRouteInformationProvider? _routeInformationProvider;
@@ -25,10 +34,11 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
   @override
   void initState() {
     super.initState();
+    _authController = AuthController(enabled: widget.authenticationEnabled);
     _appState = UtilityAppState(
       repository: widget.repository ?? InMemoryUtilityRepository(),
     );
-    _routerDelegate = UtilityRouterDelegate(_appState);
+    _routerDelegate = UtilityRouterDelegate(_appState, _authController);
 
     final initialLink = widget.initialLink;
     if (initialLink != null) {
@@ -36,12 +46,15 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
         initialRouteInformation: RouteInformation(uri: Uri.parse(initialLink)),
       );
     }
+
+    _authController.initialize();
   }
 
   @override
   void dispose() {
     _routeInformationProvider?.dispose();
     _routerDelegate.dispose();
+    _authController.dispose();
     _appState.dispose();
     super.dispose();
   }
@@ -172,11 +185,13 @@ class UtilityRouteInformationParser
 
 class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<UtilityRoutePath> {
-  UtilityRouterDelegate(this._appState) {
+  UtilityRouterDelegate(this._appState, this._authController) {
     _appState.addListener(notifyListeners);
+    _authController.addListener(notifyListeners);
   }
 
   final UtilityAppState _appState;
+  final AuthController _authController;
 
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -191,6 +206,19 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
 
   @override
   Widget build(BuildContext context) {
+    if (_authController.isEnabled && !_authController.isSignedIn) {
+      return Navigator(
+        key: navigatorKey,
+        pages: [
+          MaterialPage<void>(
+            key: const ValueKey('auth-page'),
+            child: AuthScreen(controller: _authController),
+          ),
+        ],
+        onDidRemovePage: (page) {},
+      );
+    }
+
     final selectedUtility = _appState.selectedUtility;
 
     return Navigator(
@@ -202,6 +230,13 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
             utilities: _appState.utilities,
             onOpenUtility: _appState.openUtility,
             onCreateBoard: _appState.createPlanningBoard,
+            userEmail: _authController.userEmail,
+            onSignOut: _authController.isEnabled
+                ? () {
+                    _appState.showHome();
+                    _authController.signOut();
+                  }
+                : null,
           ),
         ),
         if (selectedUtility != null)
@@ -228,6 +263,7 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
   @override
   void dispose() {
     _appState.removeListener(notifyListeners);
+    _authController.removeListener(notifyListeners);
     super.dispose();
   }
 }
