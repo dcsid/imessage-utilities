@@ -4,8 +4,6 @@ import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:chat_utilities_hub/src/presentation/app_backdrop.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/app_surface.dart';
-import 'package:chat_utilities_hub/src/presentation/availability_board.dart';
-import 'package:chat_utilities_hub/src/presentation/date_labels.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -15,14 +13,14 @@ class HomeScreen extends StatelessWidget {
     required this.utilities,
     required this.onOpenUtility,
     required this.onCreateBoard,
-    this.userEmail,
+    this.userContact,
     this.onSignOut,
   });
 
   final List<UtilityInstance> utilities;
   final ValueChanged<String> onOpenUtility;
   final ValueChanged<CreatePlanningBoardInput> onCreateBoard;
-  final String? userEmail;
+  final String? userContact;
   final VoidCallback? onSignOut;
 
   @override
@@ -37,19 +35,38 @@ class HomeScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
                 children: [
-                  _buildHeader(context),
+                  _Header(
+                    userContact: userContact,
+                    onCreateOuting: () => _showCreateBoardSheet(context),
+                    onSignOut: onSignOut,
+                  ),
                   const SizedBox(height: 24),
-                  if (utilities.isEmpty)
-                    _EmptyState(onCreateBoard: () => _showCreateBoardSheet(context))
-                  else
-                    ...utilities.map((utility) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _BoardCard(
-                        utility: utility,
-                        onOpen: () => onOpenUtility(utility.id),
-                        onCopyLink: () => _copyBoardLink(context, utility),
+                  if (utilities.isNotEmpty) ...[
+                    _DashboardStats(utilities: utilities),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Your outings',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                    )),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (utilities.isEmpty)
+                    _EmptyState(
+                      onCreateOuting: () => _showCreateBoardSheet(context),
+                    )
+                  else
+                    ...utilities.map(
+                      (utility) => Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _OutingCard(
+                          utility: utility,
+                          onOpen: () => onOpenUtility(utility.id),
+                          onCopyLink: () => _copyOutingLink(context, utility),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -59,7 +76,72 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Future<void> _showCreateBoardSheet(BuildContext context) async {
+    final result = await showModalBottomSheet<CreatePlanningBoardInput>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CreatePlanningBoardSheet(
+        initialOwner: _defaultOwnerName(userContact),
+      ),
+    );
+
+    if (result != null && context.mounted) {
+      onCreateBoard(result);
+    }
+  }
+
+  static String? _defaultOwnerName(String? userContact) {
+    if (userContact == null || userContact.isEmpty) {
+      return null;
+    }
+
+    if (!userContact.contains('@')) {
+      return null;
+    }
+
+    final localPart = userContact.split('@').first.trim();
+    if (localPart.isEmpty) {
+      return userContact;
+    }
+
+    return localPart
+        .split(RegExp(r'[._-]+'))
+        .where((chunk) => chunk.isNotEmpty)
+        .map((chunk) => '${chunk[0].toUpperCase()}${chunk.substring(1)}')
+        .join(' ');
+  }
+
+  Future<void> _copyOutingLink(
+    BuildContext context,
+    UtilityInstance utility,
+  ) async {
+    await Clipboard.setData(
+      ClipboardData(text: UtilityLink.forUtility(utility.id).toString()),
+    );
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Invite link copied.')));
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.onCreateOuting,
+    this.userContact,
+    this.onSignOut,
+  });
+
+  final VoidCallback onCreateOuting;
+  final String? userContact;
+  final VoidCallback? onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return AppSurface(
@@ -71,14 +153,14 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Plan Together',
+                'Outings',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'A minimal group outing planner: find overlap fast, map the stops you care about, and keep optional location sharing simple.',
+                'Every outing starts the same way: name it, find the best time on the availability board, then add places, GPS sharing, and optional costs only if the group needs them.',
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: AppPalette.mutedText,
                   height: 1.5,
@@ -91,11 +173,16 @@ class HomeScreen extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              if (userEmail != null)
+              FilledButton.icon(
+                onPressed: onCreateOuting,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('New outing'),
+              ),
+              if (userContact != null)
                 OutlinedButton.icon(
                   onPressed: onSignOut,
                   icon: const Icon(Icons.logout_rounded),
-                  label: Text(userEmail!),
+                  label: Text(userContact!),
                 ),
             ],
           );
@@ -113,66 +200,54 @@ class HomeScreen extends StatelessWidget {
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              copy,
-              const SizedBox(height: 18),
-              actions,
-            ],
+            children: [copy, const SizedBox(height: 18), actions],
           );
         },
       ),
     );
   }
+}
 
-  Future<void> _showCreateBoardSheet(BuildContext context) async {
-    final result = await showModalBottomSheet<CreatePlanningBoardInput>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          _CreatePlanningBoardSheet(initialOwner: _defaultOwnerName(userEmail)),
+class _DashboardStats extends StatelessWidget {
+  const _DashboardStats({required this.utilities});
+
+  final List<UtilityInstance> utilities;
+
+  @override
+  Widget build(BuildContext context) {
+    final totalResponses = utilities.fold<int>(
+      0,
+      (total, utility) => total + utility.responseCount,
+    );
+    final totalStops = utilities.fold<int>(
+      0,
+      (total, utility) => total + utility.stopCount,
+    );
+    final totalExpenses = utilities.fold<int>(
+      0,
+      (total, utility) => total + utility.expenseCount,
+    );
+    final activeShares = utilities.fold<int>(
+      0,
+      (total, utility) => total + utility.activeLocationShareCount,
     );
 
-    if (result != null && context.mounted) {
-      onCreateBoard(result);
-    }
-  }
-
-  static String? _defaultOwnerName(String? userEmail) {
-    if (userEmail == null || userEmail.isEmpty) {
-      return null;
-    }
-
-    final localPart = userEmail.split('@').first.trim();
-    if (localPart.isEmpty) {
-      return userEmail;
-    }
-
-    return localPart
-        .split(RegExp(r'[._-]+'))
-        .where((chunk) => chunk.isNotEmpty)
-        .map((chunk) => '${chunk[0].toUpperCase()}${chunk.substring(1)}')
-        .join(' ');
-  }
-
-  Future<void> _copyBoardLink(
-    BuildContext context,
-    UtilityInstance utility,
-  ) async {
-    await Clipboard.setData(
-      ClipboardData(text: UtilityLink.forUtility(utility.id).toString()),
-    );
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Board link copied.')),
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _MetricPill(label: '${utilities.length} outings'),
+        _MetricPill(label: '$totalResponses responses'),
+        _MetricPill(label: '$totalStops places planned'),
+        _MetricPill(label: '$activeShares live shares'),
+        _MetricPill(label: '$totalExpenses expenses logged'),
+      ],
     );
   }
 }
 
-class _BoardCard extends StatelessWidget {
-  const _BoardCard({
+class _OutingCard extends StatelessWidget {
+  const _OutingCard({
     required this.utility,
     required this.onOpen,
     required this.onCopyLink,
@@ -185,100 +260,110 @@ class _BoardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final topScore = utility.optionScores.first;
+    final topScore = utility.optionScores.isEmpty
+        ? null
+        : utility.optionScores.first;
     final bestOverlap = utility.participants.isEmpty
         ? 'No participants yet'
+        : topScore == null
+        ? 'No time slots yet'
         : '${topScore.votes}/${utility.participants.length} available';
+    final nextStep = utility.responseCount == 0
+        ? 'Collect the first availability response'
+        : utility.stopCount == 0
+        ? 'Add the first destination'
+        : utility.expenseTrackingEnabled && utility.expenseCount == 0
+        ? 'Add expenses only if this outing needs them'
+        : 'Open the outing and keep planning';
 
     return AppSurface(
       padding: const EdgeInsets.all(20),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 760;
-          final summary = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                utility.title,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _formatDateRange(utility),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppPalette.mutedText,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _MetricPill(
-                    label:
-                        '${utility.responseCount}/${utility.participants.length} responded',
-                  ),
-                  _MetricPill(label: bestOverlap),
-                  _MetricPill(label: '${utility.stopCount} places'),
-                  _MetricPill(label: 'Created by ${utility.createdBy}'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  FilledButton(
-                    onPressed: onOpen,
-                    child: const Text('Open board'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: onCopyLink,
-                    icon: const Icon(Icons.copy_rounded),
-                    label: const Text('Copy link'),
-                  ),
-                ],
-              ),
-            ],
-          );
-
-          final preview = ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: ColoredBox(
-              color: AppPalette.surfaceMuted,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: AvailabilityBoard(
-                  utility: utility,
-                  accent: AppPalette.primary,
-                  compact: true,
-                ),
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            utility.title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
-          );
-
-          if (isWide) {
-            return Row(
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDateRange(utility),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppPalette.mutedText,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _MetricPill(
+                label:
+                    '${utility.responseCount}/${utility.participants.length} responded',
+              ),
+              _MetricPill(label: bestOverlap),
+              _MetricPill(label: '${utility.stopCount} places'),
+              _MetricPill(
+                label: utility.expenseTrackingEnabled
+                    ? '${utility.expenseCount} expenses'
+                    : 'Expenses off',
+              ),
+              _MetricPill(label: 'Organizer: ${utility.createdBy}'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppPalette.surfaceMuted,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 5, child: summary),
-                const SizedBox(width: 18),
-                Expanded(flex: 4, child: preview),
+                const Icon(Icons.flag_rounded, color: AppPalette.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Next step',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppPalette.mutedText,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        nextStep,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            );
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              summary,
-              const SizedBox(height: 18),
-              preview,
+              FilledButton(onPressed: onOpen, child: const Text('Open outing')),
+              OutlinedButton.icon(
+                onPressed: onCopyLink,
+                icon: const Icon(Icons.copy_rounded),
+                label: const Text('Copy invite link'),
+              ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -287,7 +372,7 @@ class _BoardCard extends StatelessWidget {
     final startsAt = utility.startsAt;
     final endsAt = utility.endsAt;
     if (startsAt == null || endsAt == null) {
-      return 'Weekly board';
+      return 'Weekly outing board';
     }
 
     final startMonth = _monthLabel(startsAt.month);
@@ -343,9 +428,9 @@ class _MetricPill extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onCreateBoard});
+  const _EmptyState({required this.onCreateOuting});
 
-  final VoidCallback onCreateBoard;
+  final VoidCallback onCreateOuting;
 
   @override
   Widget build(BuildContext context) {
@@ -355,14 +440,14 @@ class _EmptyState extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'No boards yet',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            'No outings yet',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            'Start with a clean weekly board, then add the places your outing needs once the timing is clear.',
+            'Create the first outing, give it a name, and start with the availability board before you worry about destinations, GPS sharing, or optional costs.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: AppPalette.mutedText,
               height: 1.5,
@@ -370,9 +455,9 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
-            onPressed: onCreateBoard,
+            onPressed: onCreateOuting,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('Create board'),
+            label: const Text('Create outing'),
           ),
         ],
       ),
@@ -436,13 +521,15 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
     final createdBy = _createdByController.text.trim();
     if (title.isEmpty || createdBy.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add both a board title and your name.')),
+        const SnackBar(content: Text('Add both an outing name and organizer.')),
       );
       return;
     }
     if (_endHour <= _startHour) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose an end time after the start time.')),
+        const SnackBar(
+          content: Text('Choose an end time after the start time.'),
+        ),
       );
       return;
     }
@@ -479,29 +566,29 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Create board',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              'Create outing',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
-              'Keep it simple: title, owner, optional starting participants, and the weekly window.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppPalette.mutedText,
-              ),
+              'Start by naming the outing and choosing the availability window. You can add destinations, GPS sharing, and optional expenses after the group agrees on the best time.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppPalette.mutedText),
             ),
             const SizedBox(height: 18),
             TextField(
               controller: _titleController,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Board title'),
+              decoration: const InputDecoration(labelText: 'Outing name'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _createdByController,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Created by'),
+              decoration: const InputDecoration(labelText: 'Organizer'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -575,7 +662,7 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
                 Expanded(
                   child: FilledButton(
                     onPressed: _submit,
-                    child: const Text('Create board'),
+                    child: const Text('Create outing'),
                   ),
                 ),
               ],
@@ -591,7 +678,11 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
   }
 
   String _formatHour(int hour) {
-    return formatTime(DateTime(2026, 1, 1, hour));
+    final value = DateTime(2026, 1, 1, hour);
+    final normalizedHour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final suffix = value.hour >= 12 ? 'PM' : 'AM';
+    return '$normalizedHour:$minute $suffix';
   }
 }
 
@@ -613,28 +704,19 @@ class _LabeledDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: AppPalette.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppPalette.border),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          borderRadius: BorderRadius.circular(18),
-          onChanged: onChanged,
-          items: values
-              .map(
-                (item) => DropdownMenuItem<T>(
-                  value: item,
-                  child: Text(
-                    '$label: ${labelBuilder?.call(item) ?? item}',
-                  ),
-                ),
-              )
-              .toList(growable: false),
-        ),
+      constraints: const BoxConstraints(minWidth: 110),
+      child: DropdownButtonFormField<T>(
+        initialValue: value,
+        decoration: InputDecoration(labelText: label),
+        items: values
+            .map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(labelBuilder?.call(item) ?? '$item'),
+              ),
+            )
+            .toList(growable: false),
+        onChanged: onChanged,
       ),
     );
   }

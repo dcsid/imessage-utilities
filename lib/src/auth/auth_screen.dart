@@ -16,41 +16,59 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
+  final _signUpIdentifierController = TextEditingController();
   final _passwordController = TextEditingController();
   final _codeController = TextEditingController();
   _AuthMode _mode = _AuthMode.signIn;
+  AuthIdentifierMethod _signUpMethod = AuthIdentifierMethod.email;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
+    _signUpIdentifierController.dispose();
     _passwordController.dispose();
     _codeController.dispose();
     super.dispose();
   }
 
   Future<void> _submitCredentials() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    if (email.isEmpty) {
-      return;
-    }
-
     if (_mode == _AuthMode.forgotPassword) {
-      await widget.controller.resetPassword(email: email);
+      final identifier = _identifierController.text.trim();
+      if (identifier.isEmpty) {
+        return;
+      }
+      await widget.controller.resetPassword(identifier: identifier);
       return;
     }
 
+    final password = _passwordController.text;
     if (password.isEmpty) {
       return;
     }
 
     if (_mode == _AuthMode.signIn) {
-      await widget.controller.signIn(email: email, password: password);
+      final identifier = _identifierController.text.trim();
+      if (identifier.isEmpty) {
+        return;
+      }
+      await widget.controller.signIn(
+        identifier: identifier,
+        password: password,
+      );
       return;
     }
 
-    await widget.controller.signUp(email: email, password: password);
+    final identifier = _signUpIdentifierController.text.trim();
+    if (identifier.isEmpty) {
+      return;
+    }
+
+    await widget.controller.signUp(
+      method: _signUpMethod,
+      identifier: identifier,
+      password: password,
+    );
   }
 
   Future<void> _confirmSignUp() async {
@@ -68,11 +86,14 @@ class _AuthScreenState extends State<AuthScreen> {
       builder: (context, _) {
         final controller = widget.controller;
         final errorMessage = controller.errorMessage;
+        final infoMessage = controller.infoMessage;
+        final currentContact = controller.userContact;
 
-        if (controller.userEmail != null &&
-            _emailController.text.isEmpty &&
-            controller.needsConfirmation) {
-          _emailController.text = controller.userEmail!;
+        if (currentContact != null &&
+            _identifierController.text.isEmpty &&
+            (controller.needsConfirmation ||
+                controller.status == AuthStatus.awaitingResetPassword)) {
+          _identifierController.text = currentContact;
         }
 
         return Scaffold(
@@ -91,24 +112,30 @@ class _AuthScreenState extends State<AuthScreen> {
                         children: [
                           Text(
                             controller.needsConfirmation
-                                ? 'Confirm your email'
-                                : controller.status == AuthStatus.awaitingResetPassword
-                                    ? 'Reset your password'
-                                    : _mode == _AuthMode.forgotPassword
-                                        ? 'Forgot your password?'
-                                        : 'Sign in to Plan Together',
+                                ? 'Confirm your account'
+                                : controller.status ==
+                                      AuthStatus.awaitingResetPassword
+                                ? 'Reset your password'
+                                : _mode == _AuthMode.forgotPassword
+                                ? 'Forgot your password?'
+                                : _mode == _AuthMode.signUp
+                                ? 'Create your account'
+                                : 'Sign in to Plan Together',
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 10),
                           Text(
                             controller.needsConfirmation
-                                ? 'Enter the code that AWS Cognito emailed you, then we will sign you in automatically.'
-                                : controller.status == AuthStatus.awaitingResetPassword
-                                    ? 'Enter the reset code sent to your email and your new password.'
-                                    : _mode == _AuthMode.forgotPassword
-                                        ? 'Enter your email to receive a password reset code.'
-                                        : 'Use email and password to keep your planning boards tied to one account.',
+                                ? controller.confirmationPrompt
+                                : controller.status ==
+                                      AuthStatus.awaitingResetPassword
+                                ? controller.resetPasswordPrompt
+                                : _mode == _AuthMode.forgotPassword
+                                ? 'Use your email address or phone number to receive a password reset code.'
+                                : _mode == _AuthMode.signUp
+                                ? 'Create an account with either an email address or a phone number. You only need one.'
+                                : 'Sign in with the same email address or phone number you used to create the account.',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppPalette.mutedText),
                           ),
@@ -116,13 +143,14 @@ class _AuthScreenState extends State<AuthScreen> {
                           if (controller.status == AuthStatus.loading)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: CircularProgressIndicator(),
-                              ),
+                              child: Center(child: CircularProgressIndicator()),
                             )
                           else if (controller.needsConfirmation)
                             _ConfirmationForm(
-                              email: controller.userEmail ?? _emailController.text,
+                              contact:
+                                  controller.deliveryDestination ??
+                                  currentContact ??
+                                  _identifierController.text,
                               codeController: _codeController,
                               isBusy: controller.isBusy,
                               onConfirm: _confirmSignUp,
@@ -135,9 +163,13 @@ class _AuthScreenState extends State<AuthScreen> {
                                 });
                               },
                             )
-                          else if (controller.status == AuthStatus.awaitingResetPassword)
+                          else if (controller.status ==
+                              AuthStatus.awaitingResetPassword)
                             _ResetPasswordForm(
-                              email: controller.userEmail ?? _emailController.text,
+                              contact:
+                                  controller.deliveryDestination ??
+                                  currentContact ??
+                                  _identifierController.text,
                               codeController: _codeController,
                               passwordController: _passwordController,
                               isBusy: controller.isBusy,
@@ -146,7 +178,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 final newPassword = _passwordController.text;
                                 if (code.isNotEmpty && newPassword.isNotEmpty) {
                                   await widget.controller.confirmResetPassword(
-                                      newPassword: newPassword, confirmationCode: code);
+                                    newPassword: newPassword,
+                                    confirmationCode: code,
+                                  );
                                 }
                               },
                               onBack: () {
@@ -161,32 +195,32 @@ class _AuthScreenState extends State<AuthScreen> {
                           else
                             _CredentialsForm(
                               mode: _mode,
-                              emailController: _emailController,
+                              identifierController: _identifierController,
+                              signUpIdentifierController:
+                                  _signUpIdentifierController,
                               passwordController: _passwordController,
                               isBusy: controller.isBusy,
+                              signUpMethod: _signUpMethod,
                               onSubmit: _submitCredentials,
+                              onSignUpMethodChanged: (method) {
+                                setState(() {
+                                  _signUpMethod = method;
+                                  _signUpIdentifierController.clear();
+                                });
+                              },
                               onModeChanged: (mode) {
                                 setState(() {
                                   _mode = mode;
                                 });
                               },
                             ),
+                          if (infoMessage != null) ...[
+                            const SizedBox(height: 16),
+                            _MessageCard(message: infoMessage),
+                          ],
                           if (errorMessage != null) ...[
                             const SizedBox(height: 16),
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: AppPalette.primarySoft,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: AppPalette.border),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Text(
-                                  errorMessage,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                            ),
+                            _MessageCard(message: errorMessage, isError: true),
                           ],
                         ],
                       ),
@@ -205,18 +239,24 @@ class _AuthScreenState extends State<AuthScreen> {
 class _CredentialsForm extends StatelessWidget {
   const _CredentialsForm({
     required this.mode,
-    required this.emailController,
+    required this.identifierController,
+    required this.signUpIdentifierController,
     required this.passwordController,
     required this.isBusy,
+    required this.signUpMethod,
     required this.onSubmit,
+    required this.onSignUpMethodChanged,
     required this.onModeChanged,
   });
 
   final _AuthMode mode;
-  final TextEditingController emailController;
+  final TextEditingController identifierController;
+  final TextEditingController signUpIdentifierController;
   final TextEditingController passwordController;
   final bool isBusy;
+  final AuthIdentifierMethod signUpMethod;
   final Future<void> Function() onSubmit;
+  final ValueChanged<AuthIdentifierMethod> onSignUpMethodChanged;
   final ValueChanged<_AuthMode> onModeChanged;
 
   @override
@@ -245,26 +285,69 @@ class _CredentialsForm extends StatelessWidget {
                 ? null
                 : (selection) => onModeChanged(selection.first),
           ),
-        if (mode != _AuthMode.forgotPassword)
-          const SizedBox(height: 18),
-        TextField(
-          controller: emailController,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          autofillHints: const [AutofillHints.email],
-          enabled: !isBusy,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            hintText: 'you@example.com',
+        if (mode != _AuthMode.forgotPassword) const SizedBox(height: 18),
+        if (mode == _AuthMode.signUp) ...[
+          SegmentedButton<AuthIdentifierMethod>(
+            segments: const [
+              ButtonSegment<AuthIdentifierMethod>(
+                value: AuthIdentifierMethod.email,
+                label: Text('Email'),
+              ),
+              ButtonSegment<AuthIdentifierMethod>(
+                value: AuthIdentifierMethod.phone,
+                label: Text('Phone'),
+              ),
+            ],
+            selected: {signUpMethod},
+            onSelectionChanged: isBusy
+                ? null
+                : (selection) => onSignUpMethodChanged(selection.first),
           ),
-        ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: signUpIdentifierController,
+            keyboardType: signUpMethod == AuthIdentifierMethod.email
+                ? TextInputType.emailAddress
+                : TextInputType.phone,
+            textInputAction: TextInputAction.next,
+            autofillHints: signUpMethod == AuthIdentifierMethod.email
+                ? const [AutofillHints.email]
+                : const [AutofillHints.telephoneNumber],
+            enabled: !isBusy,
+            decoration: InputDecoration(
+              labelText: signUpMethod == AuthIdentifierMethod.email
+                  ? 'Email address'
+                  : 'Phone number',
+              hintText: signUpMethod == AuthIdentifierMethod.email
+                  ? 'you@example.com'
+                  : '+1 555 123 4567',
+            ),
+          ),
+        ] else
+          TextField(
+            controller: identifierController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [
+              AutofillHints.username,
+              AutofillHints.email,
+              AutofillHints.telephoneNumber,
+            ],
+            enabled: !isBusy,
+            decoration: const InputDecoration(
+              labelText: 'Email or phone',
+              hintText: 'you@example.com or +1 555 123 4567',
+            ),
+          ),
         if (mode != _AuthMode.forgotPassword) ...[
           const SizedBox(height: 14),
           TextField(
             controller: passwordController,
             obscureText: true,
             textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.password],
+            autofillHints: mode == _AuthMode.signUp
+                ? const [AutofillHints.newPassword]
+                : const [AutofillHints.password],
             enabled: !isBusy,
             decoration: InputDecoration(
               labelText: 'Password',
@@ -272,20 +355,31 @@ class _CredentialsForm extends StatelessWidget {
                   ? 'Your password'
                   : 'At least 8 chars, with upper/lowercase, number, symbol',
             ),
-            onSubmitted: (_) {
-              onSubmit();
-            },
+            onSubmitted: (_) => onSubmit(),
           ),
           if (mode == _AuthMode.signIn) ...[
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: isBusy ? null : () => onModeChanged(_AuthMode.forgotPassword),
-                child: const Text('Forgot Password?'),
+                onPressed: isBusy
+                    ? null
+                    : () => onModeChanged(_AuthMode.forgotPassword),
+                child: const Text('Forgot password?'),
               ),
             ),
           ],
+        ],
+        if (mode == _AuthMode.signUp) ...[
+          const SizedBox(height: 10),
+          Text(
+            signUpMethod == AuthIdentifierMethod.email
+                ? 'Use a real email address so you can receive the confirmation code.'
+                : 'Use a real mobile number that can receive SMS verification codes.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppPalette.mutedText),
+          ),
         ],
         const SizedBox(height: 18),
         SizedBox(
@@ -309,9 +403,33 @@ class _CredentialsForm extends StatelessWidget {
   }
 }
 
+class _MessageCard extends StatelessWidget {
+  const _MessageCard({required this.message, this.isError = false});
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: isError ? const Color(0xFFFFF3F2) : AppPalette.primarySoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isError ? const Color(0xFFFFC9C5) : AppPalette.border,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
+      ),
+    );
+  }
+}
+
 class _ConfirmationForm extends StatelessWidget {
   const _ConfirmationForm({
-    required this.email,
+    required this.contact,
     required this.codeController,
     required this.isBusy,
     required this.onConfirm,
@@ -319,7 +437,7 @@ class _ConfirmationForm extends StatelessWidget {
     required this.onBack,
   });
 
-  final String email;
+  final String contact;
   final TextEditingController codeController;
   final bool isBusy;
   final Future<void> Function() onConfirm;
@@ -332,7 +450,7 @@ class _ConfirmationForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          email,
+          contact,
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -348,9 +466,7 @@ class _ConfirmationForm extends StatelessWidget {
             labelText: 'Confirmation code',
             hintText: '123456',
           ),
-          onSubmitted: (_) {
-            onConfirm();
-          },
+          onSubmitted: (_) => onConfirm(),
         ),
         const SizedBox(height: 18),
         SizedBox(
@@ -382,7 +498,7 @@ class _ConfirmationForm extends StatelessWidget {
 
 class _ResetPasswordForm extends StatelessWidget {
   const _ResetPasswordForm({
-    required this.email,
+    required this.contact,
     required this.codeController,
     required this.passwordController,
     required this.isBusy,
@@ -390,7 +506,7 @@ class _ResetPasswordForm extends StatelessWidget {
     required this.onBack,
   });
 
-  final String email;
+  final String contact;
   final TextEditingController codeController;
   final TextEditingController passwordController;
   final bool isBusy;
@@ -403,7 +519,7 @@ class _ResetPasswordForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          email,
+          contact,
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -428,12 +544,10 @@ class _ResetPasswordForm extends StatelessWidget {
           autofillHints: const [AutofillHints.newPassword],
           enabled: !isBusy,
           decoration: const InputDecoration(
-            labelText: 'New Password',
+            labelText: 'New password',
             hintText: 'At least 8 chars...',
           ),
-          onSubmitted: (_) {
-            onConfirm();
-          },
+          onSubmitted: (_) => onConfirm(),
         ),
         const SizedBox(height: 18),
         SizedBox(

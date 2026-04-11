@@ -1,7 +1,15 @@
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/foundation.dart';
 
-enum AuthStatus { loading, signedOut, awaitingConfirmation, awaitingResetPassword, signedIn }
+enum AuthStatus {
+  loading,
+  signedOut,
+  awaitingConfirmation,
+  awaitingResetPassword,
+  signedIn,
+}
+
+enum AuthIdentifierMethod { email, phone }
 
 class AuthController extends ChangeNotifier {
   AuthController({required bool enabled}) : _enabled = enabled {
@@ -15,17 +23,55 @@ class AuthController extends ChangeNotifier {
   AuthStatus _status = AuthStatus.loading;
   bool _busy = false;
   String? _errorMessage;
+  String? _infoMessage;
+  String? _pendingIdentifier;
   String? _pendingEmail;
+  String? _pendingPhoneNumber;
   String? _pendingPassword;
-  String? _userEmail;
+  String? _deliveryDestination;
+  String? _deliveryMedium;
+  _AuthAccount? _account;
 
   AuthStatus get status => _status;
   bool get isBusy => _busy;
   bool get isSignedIn => _status == AuthStatus.signedIn;
   bool get needsConfirmation => _status == AuthStatus.awaitingConfirmation;
   String? get errorMessage => _errorMessage;
-  String? get userEmail => _userEmail ?? _pendingEmail;
+  String? get infoMessage => _infoMessage;
   bool get isEnabled => _enabled;
+  String? get userId => _account?.userId;
+  String? get userContact =>
+      _account?.displayContact ??
+      _pendingEmail ??
+      _pendingPhoneNumber ??
+      _pendingIdentifier;
+  String? get deliveryDestination => _deliveryDestination ?? userContact;
+  String get confirmationPrompt {
+    final destination = deliveryDestination;
+    final medium = _deliveryMedium;
+    if (destination != null && medium != null) {
+      return 'Enter the confirmation code sent to $destination by $medium.';
+    }
+    if (destination != null) {
+      return 'Enter the confirmation code for $destination, or resend one below.';
+    }
+    return 'Enter the confirmation code for this account, or resend one below.';
+  }
+
+  String get resetPasswordPrompt {
+    final destination = deliveryDestination;
+    final medium = _deliveryMedium;
+    if (destination != null && medium != null) {
+      return 'Enter the reset code sent to $destination by $medium, then choose a new password.';
+    }
+    if (destination != null) {
+      return 'Enter the reset code for $destination, then choose a new password.';
+    }
+    return 'Enter the reset code and choose a new password.';
+  }
+
+  Iterable<String> get storageAliases =>
+      _account?.storageAliases ?? const <String>[];
 
   Future<void> initialize() async {
     if (!_enabled) {
@@ -37,7 +83,7 @@ class AuthController extends ChangeNotifier {
     await _runBusy(() async {
       final session = await Amplify.Auth.fetchAuthSession();
       if (session.isSignedIn) {
-        _userEmail = await _loadUserEmail();
+        _account = await _loadCurrentAccount();
         _status = AuthStatus.signedIn;
         return;
       }
@@ -47,88 +93,116 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> signIn({
-    required String email,
+    required String identifier,
     required String password,
   }) async {
     await _runBusy(() async {
-      final normalizedEmail = email.trim();
+      final normalizedIdentifier = _normalizeIdentifier(identifier);
       final result = await Amplify.Auth.signIn(
-        username: normalizedEmail,
+        username: normalizedIdentifier,
         password: password,
       );
 
       if (result.isSignedIn) {
-        _userEmail = normalizedEmail;
-        _pendingEmail = null;
-        _pendingPassword = null;
+        _account = await _loadCurrentAccount();
+        _clearPendingState();
         _status = AuthStatus.signedIn;
         return;
       }
 
       if (result.nextStep.signInStep == AuthSignInStep.confirmSignUp) {
-        _pendingEmail = normalizedEmail;
+        _pendingIdentifier = normalizedIdentifier;
         _pendingPassword = password;
+        _setDeliveryDetails(
+          result.nextStep.codeDeliveryDetails,
+          fallbackDestination: _displayIdentifier(normalizedIdentifier),
+        );
         _status = AuthStatus.awaitingConfirmation;
-        _errorMessage =
-            'Check your email for the confirmation code before signing in.';
+        _infoMessage =
+            'This account still needs to be confirmed before sign-in can finish.';
         return;
       }
 
-      throw StateError('Unsupported sign-in challenge: ${result.nextStep.signInStep}');
+      throw StateError(
+        'Unsupported sign-in challenge: ${result.nextStep.signInStep}',
+      );
     });
   }
 
   Future<void> signUp({
-    required String email,
+    required AuthIdentifierMethod method,
+    required String identifier,
     required String password,
   }) async {
     await _runBusy(() async {
-      final normalizedEmail = email.trim();
+      _validateIdentifier(method, identifier);
+      final normalizedIdentifier = _normalizeIdentifierForMethod(
+        method,
+        identifier,
+      );
+      final userAttributes = switch (method) {
+        AuthIdentifierMethod.email => <AuthUserAttributeKey, String>{
+          AuthUserAttributeKey.email: normalizedIdentifier,
+        },
+        AuthIdentifierMethod.phone => <AuthUserAttributeKey, String>{
+          AuthUserAttributeKey.phoneNumber: normalizedIdentifier,
+        },
+      };
       final result = await Amplify.Auth.signUp(
-        username: normalizedEmail,
+        username: normalizedIdentifier,
         password: password,
-        options: SignUpOptions(
-          userAttributes: {
-            AuthUserAttributeKey.email: normalizedEmail,
-          },
-        ),
+        options: SignUpOptions(userAttributes: userAttributes),
       );
 
-      _pendingEmail = normalizedEmail;
+      _pendingIdentifier = normalizedIdentifier;
+      _pendingEmail = switch (method) {
+        AuthIdentifierMethod.email => normalizedIdentifier,
+        AuthIdentifierMethod.phone => null,
+      };
+      _pendingPhoneNumber = switch (method) {
+        AuthIdentifierMethod.email => null,
+        AuthIdentifierMethod.phone => normalizedIdentifier,
+      };
       _pendingPassword = password;
 
-      switch (result.nextStep.signUpStep) {
-        case AuthSignUpStep.confirmSignUp:
-          _status = AuthStatus.awaitingConfirmation;
-        case AuthSignUpStep.done:
-          final signInResult = await Amplify.Auth.signIn(
-            username: normalizedEmail,
-            password: password,
-          );
-          if (!signInResult.isSignedIn) {
-            _status = AuthStatus.signedOut;
-            return;
-          }
-
-          _userEmail = normalizedEmail;
-          _pendingEmail = null;
-          _pendingPassword = null;
-          _status = AuthStatus.signedIn;
+      if (result.nextStep.signUpStep == AuthSignUpStep.confirmSignUp) {
+        _setDeliveryDetails(
+          result.nextStep.codeDeliveryDetails,
+          fallbackDestination: _displayIdentifier(normalizedIdentifier),
+        );
+        _infoMessage = _deliveryDestination == null
+            ? 'We created your account. Enter the confirmation code to continue.'
+            : 'We sent a confirmation code to $_deliveryDestination.';
+        _status = AuthStatus.awaitingConfirmation;
+        return;
       }
+
+      final signInResult = await Amplify.Auth.signIn(
+        username: normalizedIdentifier,
+        password: password,
+      );
+      if (!signInResult.isSignedIn) {
+        _status = AuthStatus.signedOut;
+        return;
+      }
+
+      _account = await _loadCurrentAccount();
+      _clearPendingState();
+      _status = AuthStatus.signedIn;
     });
   }
 
   Future<void> confirmSignUp(String confirmationCode) async {
-    final pendingEmail = _pendingEmail;
-    if (pendingEmail == null) {
-      _errorMessage = 'Start account creation again to confirm your email.';
+    final pendingIdentifier = _pendingIdentifier;
+    if (pendingIdentifier == null) {
+      _errorMessage = 'Start account creation again to confirm your account.';
       notifyListeners();
       return;
     }
 
     await _runBusy(() async {
       final result = await Amplify.Auth.confirmSignUp(
-        username: pendingEmail,
+        username: pendingIdentifier,
         confirmationCode: confirmationCode.trim(),
       );
 
@@ -143,51 +217,69 @@ class AuthController extends ChangeNotifier {
       }
 
       final signInResult = await Amplify.Auth.signIn(
-        username: pendingEmail,
+        username: pendingIdentifier,
         password: pendingPassword,
       );
 
       if (!signInResult.isSignedIn) {
-        throw StateError('Email confirmed, but automatic sign-in did not finish.');
+        throw StateError(
+          'Account confirmed, but automatic sign-in did not finish.',
+        );
       }
 
-      _userEmail = pendingEmail;
-      _pendingEmail = null;
-      _pendingPassword = null;
+      _account = await _loadCurrentAccount();
+      _clearPendingState();
       _status = AuthStatus.signedIn;
     });
   }
 
   Future<void> resendConfirmationCode() async {
-    final pendingEmail = _pendingEmail;
-    if (pendingEmail == null) {
+    final pendingIdentifier = _pendingIdentifier;
+    if (pendingIdentifier == null) {
       _errorMessage = 'Start account creation again to resend the code.';
       notifyListeners();
       return;
     }
 
     await _runBusy(() async {
-      await Amplify.Auth.resendSignUpCode(username: pendingEmail);
-      _errorMessage = 'A fresh confirmation code was sent to $pendingEmail.';
+      final result = await Amplify.Auth.resendSignUpCode(
+        username: pendingIdentifier,
+      );
+      _setDeliveryDetails(
+        result.codeDeliveryDetails,
+        fallbackDestination: _displayIdentifier(pendingIdentifier),
+      );
+      _infoMessage = _deliveryDestination == null
+          ? 'A fresh confirmation code was sent.'
+          : 'A fresh confirmation code was sent to $_deliveryDestination.';
     });
   }
 
-  Future<void> resetPassword({required String email}) async {
+  Future<void> resetPassword({required String identifier}) async {
     await _runBusy(() async {
-      final normalizedEmail = email.trim();
+      final normalizedIdentifier = _normalizeIdentifier(identifier);
       final result = await Amplify.Auth.resetPassword(
-        username: normalizedEmail,
+        username: normalizedIdentifier,
       );
 
-      _pendingEmail = normalizedEmail;
+      _pendingIdentifier = normalizedIdentifier;
 
-      switch (result.nextStep.updateStep) {
-        case AuthResetPasswordStep.confirmResetPasswordWithCode:
-          _status = AuthStatus.awaitingResetPassword;
-        case AuthResetPasswordStep.done:
-          _status = AuthStatus.signedOut;
-          _errorMessage = 'Password reset complete. Please sign in with your new password.';
+      if (result.nextStep.updateStep ==
+          AuthResetPasswordStep.confirmResetPasswordWithCode) {
+        _setDeliveryDetails(
+          result.nextStep.codeDeliveryDetails,
+          fallbackDestination: _displayIdentifier(normalizedIdentifier),
+        );
+        _infoMessage = _deliveryDestination == null
+            ? 'We sent a password reset code.'
+            : 'We sent a password reset code to $_deliveryDestination.';
+        _status = AuthStatus.awaitingResetPassword;
+        return;
       }
+
+      _status = AuthStatus.signedOut;
+      _infoMessage =
+          'Password reset complete. Please sign in with your new password.';
     });
   }
 
@@ -195,8 +287,8 @@ class AuthController extends ChangeNotifier {
     required String newPassword,
     required String confirmationCode,
   }) async {
-    final pendingEmail = _pendingEmail;
-    if (pendingEmail == null) {
+    final pendingIdentifier = _pendingIdentifier;
+    if (pendingIdentifier == null) {
       _errorMessage = 'Start password reset again to confirm.';
       notifyListeners();
       return;
@@ -204,7 +296,7 @@ class AuthController extends ChangeNotifier {
 
     await _runBusy(() async {
       final result = await Amplify.Auth.confirmResetPassword(
-        username: pendingEmail,
+        username: pendingIdentifier,
         newPassword: newPassword,
         confirmationCode: confirmationCode.trim(),
       );
@@ -214,19 +306,18 @@ class AuthController extends ChangeNotifier {
       }
 
       final signInResult = await Amplify.Auth.signIn(
-        username: pendingEmail,
+        username: pendingIdentifier,
         password: newPassword,
       );
 
       if (!signInResult.isSignedIn) {
         _status = AuthStatus.signedOut;
-        _errorMessage = 'Password reset successful. Please sign in.';
+        _infoMessage = 'Password reset successful. Please sign in.';
         return;
       }
 
-      _userEmail = pendingEmail;
-      _pendingEmail = null;
-      _pendingPassword = null;
+      _account = await _loadCurrentAccount();
+      _clearPendingState();
       _status = AuthStatus.signedIn;
     });
   }
@@ -238,17 +329,15 @@ class AuthController extends ChangeNotifier {
 
     await _runBusy(() async {
       await Amplify.Auth.signOut();
-      _userEmail = null;
-      _pendingEmail = null;
-      _pendingPassword = null;
+      _account = null;
+      _clearPendingState();
       _status = AuthStatus.signedOut;
     });
   }
 
   void showSignIn() {
-    _pendingEmail = null;
-    _pendingPassword = null;
-    _userEmail = null;
+    _account = null;
+    _clearPendingState();
     _errorMessage = null;
     _status = AuthStatus.signedOut;
     notifyListeners();
@@ -257,6 +346,7 @@ class AuthController extends ChangeNotifier {
   Future<void> _runBusy(Future<void> Function() action) async {
     _busy = true;
     _errorMessage = null;
+    _infoMessage = null;
     notifyListeners();
 
     try {
@@ -277,15 +367,142 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<String?> _loadUserEmail() async {
+  Future<_AuthAccount> _loadCurrentAccount() async {
+    final currentUser = await Amplify.Auth.getCurrentUser();
     final attributes = await Amplify.Auth.fetchUserAttributes();
+    String? email;
+    String? phoneNumber;
+
     for (final attribute in attributes) {
       if (attribute.userAttributeKey == AuthUserAttributeKey.email) {
-        return attribute.value;
+        email = _normalizeEmail(attribute.value);
+      }
+      if (attribute.userAttributeKey == AuthUserAttributeKey.phoneNumber) {
+        phoneNumber = _normalizePhoneNumber(attribute.value);
       }
     }
 
-    final currentUser = await Amplify.Auth.getCurrentUser();
-    return currentUser.username;
+    return _AuthAccount(
+      userId: currentUser.userId,
+      username: currentUser.username,
+      email: email,
+      phoneNumber: phoneNumber,
+    );
+  }
+
+  void _clearPendingState() {
+    _pendingIdentifier = null;
+    _pendingEmail = null;
+    _pendingPhoneNumber = null;
+    _pendingPassword = null;
+    _deliveryDestination = null;
+    _deliveryMedium = null;
+    _infoMessage = null;
+  }
+
+  String _normalizeIdentifier(String value) {
+    final trimmed = value.trim();
+    if (trimmed.contains('@')) {
+      return _normalizeEmail(trimmed);
+    }
+    return _normalizePhoneNumber(trimmed);
+  }
+
+  String _normalizeIdentifierForMethod(
+    AuthIdentifierMethod method,
+    String value,
+  ) {
+    return switch (method) {
+      AuthIdentifierMethod.email => _normalizeEmail(value),
+      AuthIdentifierMethod.phone => _normalizePhoneNumber(value),
+    };
+  }
+
+  String _normalizeEmail(String value) => value.trim().toLowerCase();
+
+  String _normalizePhoneNumber(String value) {
+    var normalized = value.trim().replaceAll(RegExp(r'[\s().-]+'), '');
+    if (normalized.startsWith('00')) {
+      normalized = '+${normalized.substring(2)}';
+    }
+
+    if (normalized.startsWith('+')) {
+      final digits = normalized.substring(1).replaceAll(RegExp(r'\D'), '');
+      return '+$digits';
+    }
+
+    final digits = normalized.replaceAll(RegExp(r'\D'), '');
+    if (digits.length == 10) {
+      return '+1$digits';
+    }
+    if (digits.length == 11 && digits.startsWith('1')) {
+      return '+$digits';
+    }
+
+    return '+$digits';
+  }
+
+  void _validateIdentifier(AuthIdentifierMethod method, String value) {
+    final trimmed = value.trim();
+    if (method == AuthIdentifierMethod.email && !trimmed.contains('@')) {
+      throw Exception('Enter a valid email address.');
+    }
+
+    if (method == AuthIdentifierMethod.phone) {
+      final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+      if (digits.length < 10) {
+        throw Exception(
+          'Enter a valid phone number that can receive text messages.',
+        );
+      }
+    }
+  }
+
+  void _setDeliveryDetails(
+    AuthCodeDeliveryDetails? details, {
+    String? fallbackDestination,
+  }) {
+    _deliveryDestination = details?.destination ?? fallbackDestination;
+    _deliveryMedium = details?.deliveryMedium.name.toLowerCase();
+  }
+
+  String _displayIdentifier(String identifier) {
+    if (identifier.contains('@')) {
+      return _normalizeEmail(identifier);
+    }
+
+    final normalized = _normalizePhoneNumber(identifier);
+    if (normalized.length <= 4) {
+      return normalized;
+    }
+    final suffix = normalized.substring(normalized.length - 4);
+    return 'phone ending in $suffix';
+  }
+}
+
+class _AuthAccount {
+  const _AuthAccount({
+    required this.userId,
+    required this.username,
+    this.email,
+    this.phoneNumber,
+  });
+
+  final String userId;
+  final String username;
+  final String? email;
+  final String? phoneNumber;
+
+  String get displayContact => email ?? phoneNumber ?? username;
+
+  Iterable<String> get storageAliases sync* {
+    final seen = <String>{};
+    for (final candidate in <String?>[username, email, phoneNumber]) {
+      final normalized = candidate?.trim();
+      if (normalized == null || normalized.isEmpty || !seen.add(normalized)) {
+        continue;
+      }
+      yield normalized;
+    }
   }
 }

@@ -29,8 +29,13 @@ class ParticipantLocationEvent extends amplify_core.Model {
   final String id;
   final String? _participantName;
   final String? _utilityId;
+  final String? _destinationStopId;
+  final String? _statusMessage;
+  final bool? _isBusy;
+  final String? _shareMode;
   final double? _lat;
   final double? _lng;
+  final double? _speedMps;
   final amplify_core.TemporalDateTime? _sharedAt;
   final amplify_core.TemporalDateTime? _expiresAt;
   final amplify_core.TemporalDateTime? _createdAt;
@@ -75,6 +80,31 @@ class ParticipantLocationEvent extends amplify_core.Model {
     }
   }
   
+  String? get destinationStopId {
+    return _destinationStopId;
+  }
+  
+  String? get statusMessage {
+    return _statusMessage;
+  }
+  
+  bool? get isBusy {
+    return _isBusy;
+  }
+  
+  String get shareMode {
+    try {
+      return _shareMode!;
+    } catch(e) {
+      throw amplify_core.AmplifyCodeGenModelException(
+          amplify_core.AmplifyExceptionMessages.codeGenRequiredFieldForceCastExceptionMessage,
+          recoverySuggestion:
+            amplify_core.AmplifyExceptionMessages.codeGenRequiredFieldForceCastRecoverySuggestion,
+          underlyingException: e.toString()
+          );
+    }
+  }
+  
   double get lat {
     try {
       return _lat!;
@@ -99,6 +129,10 @@ class ParticipantLocationEvent extends amplify_core.Model {
           underlyingException: e.toString()
           );
     }
+  }
+  
+  double? get speedMps {
+    return _speedMps;
   }
   
   amplify_core.TemporalDateTime get sharedAt {
@@ -126,15 +160,20 @@ class ParticipantLocationEvent extends amplify_core.Model {
     return _updatedAt;
   }
   
-  const ParticipantLocationEvent._internal({required this.id, required participantName, required utilityId, required lat, required lng, required sharedAt, expiresAt, createdAt, updatedAt}): _participantName = participantName, _utilityId = utilityId, _lat = lat, _lng = lng, _sharedAt = sharedAt, _expiresAt = expiresAt, _createdAt = createdAt, _updatedAt = updatedAt;
+  const ParticipantLocationEvent._internal({required this.id, required participantName, required utilityId, destinationStopId, statusMessage, isBusy, required shareMode, required lat, required lng, speedMps, required sharedAt, expiresAt, createdAt, updatedAt}): _participantName = participantName, _utilityId = utilityId, _destinationStopId = destinationStopId, _statusMessage = statusMessage, _isBusy = isBusy, _shareMode = shareMode, _lat = lat, _lng = lng, _speedMps = speedMps, _sharedAt = sharedAt, _expiresAt = expiresAt, _createdAt = createdAt, _updatedAt = updatedAt;
   
-  factory ParticipantLocationEvent({String? id, required String participantName, required String utilityId, required double lat, required double lng, required amplify_core.TemporalDateTime sharedAt, amplify_core.TemporalDateTime? expiresAt}) {
+  factory ParticipantLocationEvent({String? id, required String participantName, required String utilityId, String? destinationStopId, String? statusMessage, bool? isBusy, required String shareMode, required double lat, required double lng, double? speedMps, required amplify_core.TemporalDateTime sharedAt, amplify_core.TemporalDateTime? expiresAt}) {
     return ParticipantLocationEvent._internal(
       id: id == null ? amplify_core.UUID.getUUID() : id,
       participantName: participantName,
       utilityId: utilityId,
+      destinationStopId: destinationStopId,
+      statusMessage: statusMessage,
+      isBusy: isBusy,
+      shareMode: shareMode,
       lat: lat,
       lng: lng,
+      speedMps: speedMps,
       sharedAt: sharedAt,
       expiresAt: expiresAt);
   }
@@ -150,8 +189,13 @@ class ParticipantLocationEvent extends amplify_core.Model {
       id == other.id &&
       _participantName == other._participantName &&
       _utilityId == other._utilityId &&
+      _destinationStopId == other._destinationStopId &&
+      _statusMessage == other._statusMessage &&
+      _isBusy == other._isBusy &&
+      _shareMode == other._shareMode &&
       _lat == other._lat &&
       _lng == other._lng &&
+      _speedMps == other._speedMps &&
       _sharedAt == other._sharedAt &&
       _expiresAt == other._expiresAt;
   }
@@ -167,8 +211,13 @@ class ParticipantLocationEvent extends amplify_core.Model {
     buffer.write("id=" + "$id" + ", ");
     buffer.write("participantName=" + "$_participantName" + ", ");
     buffer.write("utilityId=" + "$_utilityId" + ", ");
+    buffer.write("destinationStopId=" + "$_destinationStopId" + ", ");
+    buffer.write("statusMessage=" + "$_statusMessage" + ", ");
+    buffer.write("isBusy=" + (_isBusy != null ? _isBusy!.toString() : "null") + ", ");
+    buffer.write("shareMode=" + "$_shareMode" + ", ");
     buffer.write("lat=" + (_lat != null ? _lat!.toString() : "null") + ", ");
     buffer.write("lng=" + (_lng != null ? _lng!.toString() : "null") + ", ");
+    buffer.write("speedMps=" + (_speedMps != null ? _speedMps!.toString() : "null") + ", ");
     buffer.write("sharedAt=" + (_sharedAt != null ? _sharedAt!.format() : "null") + ", ");
     buffer.write("expiresAt=" + (_expiresAt != null ? _expiresAt!.format() : "null") + ", ");
     buffer.write("createdAt=" + (_createdAt != null ? _createdAt!.format() : "null") + ", ");
@@ -178,13 +227,18 @@ class ParticipantLocationEvent extends amplify_core.Model {
     return buffer.toString();
   }
   
-  ParticipantLocationEvent copyWith({String? participantName, String? utilityId, double? lat, double? lng, amplify_core.TemporalDateTime? sharedAt, amplify_core.TemporalDateTime? expiresAt}) {
+  ParticipantLocationEvent copyWith({String? participantName, String? utilityId, String? destinationStopId, String? statusMessage, bool? isBusy, String? shareMode, double? lat, double? lng, double? speedMps, amplify_core.TemporalDateTime? sharedAt, amplify_core.TemporalDateTime? expiresAt}) {
     return ParticipantLocationEvent._internal(
       id: id,
       participantName: participantName ?? this.participantName,
       utilityId: utilityId ?? this.utilityId,
+      destinationStopId: destinationStopId ?? this.destinationStopId,
+      statusMessage: statusMessage ?? this.statusMessage,
+      isBusy: isBusy ?? this.isBusy,
+      shareMode: shareMode ?? this.shareMode,
       lat: lat ?? this.lat,
       lng: lng ?? this.lng,
+      speedMps: speedMps ?? this.speedMps,
       sharedAt: sharedAt ?? this.sharedAt,
       expiresAt: expiresAt ?? this.expiresAt);
   }
@@ -192,8 +246,13 @@ class ParticipantLocationEvent extends amplify_core.Model {
   ParticipantLocationEvent copyWithModelFieldValues({
     ModelFieldValue<String>? participantName,
     ModelFieldValue<String>? utilityId,
+    ModelFieldValue<String?>? destinationStopId,
+    ModelFieldValue<String?>? statusMessage,
+    ModelFieldValue<bool?>? isBusy,
+    ModelFieldValue<String>? shareMode,
     ModelFieldValue<double>? lat,
     ModelFieldValue<double>? lng,
+    ModelFieldValue<double?>? speedMps,
     ModelFieldValue<amplify_core.TemporalDateTime>? sharedAt,
     ModelFieldValue<amplify_core.TemporalDateTime?>? expiresAt
   }) {
@@ -201,8 +260,13 @@ class ParticipantLocationEvent extends amplify_core.Model {
       id: id,
       participantName: participantName == null ? this.participantName : participantName.value,
       utilityId: utilityId == null ? this.utilityId : utilityId.value,
+      destinationStopId: destinationStopId == null ? this.destinationStopId : destinationStopId.value,
+      statusMessage: statusMessage == null ? this.statusMessage : statusMessage.value,
+      isBusy: isBusy == null ? this.isBusy : isBusy.value,
+      shareMode: shareMode == null ? this.shareMode : shareMode.value,
       lat: lat == null ? this.lat : lat.value,
       lng: lng == null ? this.lng : lng.value,
+      speedMps: speedMps == null ? this.speedMps : speedMps.value,
       sharedAt: sharedAt == null ? this.sharedAt : sharedAt.value,
       expiresAt: expiresAt == null ? this.expiresAt : expiresAt.value
     );
@@ -212,23 +276,33 @@ class ParticipantLocationEvent extends amplify_core.Model {
     : id = json['id'],
       _participantName = json['participantName'],
       _utilityId = json['utilityId'],
+      _destinationStopId = json['destinationStopId'],
+      _statusMessage = json['statusMessage'],
+      _isBusy = json['isBusy'],
+      _shareMode = json['shareMode'],
       _lat = (json['lat'] as num?)?.toDouble(),
       _lng = (json['lng'] as num?)?.toDouble(),
+      _speedMps = (json['speedMps'] as num?)?.toDouble(),
       _sharedAt = json['sharedAt'] != null ? amplify_core.TemporalDateTime.fromString(json['sharedAt']) : null,
       _expiresAt = json['expiresAt'] != null ? amplify_core.TemporalDateTime.fromString(json['expiresAt']) : null,
       _createdAt = json['createdAt'] != null ? amplify_core.TemporalDateTime.fromString(json['createdAt']) : null,
       _updatedAt = json['updatedAt'] != null ? amplify_core.TemporalDateTime.fromString(json['updatedAt']) : null;
   
   Map<String, dynamic> toJson() => {
-    'id': id, 'participantName': _participantName, 'utilityId': _utilityId, 'lat': _lat, 'lng': _lng, 'sharedAt': _sharedAt?.format(), 'expiresAt': _expiresAt?.format(), 'createdAt': _createdAt?.format(), 'updatedAt': _updatedAt?.format()
+    'id': id, 'participantName': _participantName, 'utilityId': _utilityId, 'destinationStopId': _destinationStopId, 'statusMessage': _statusMessage, 'isBusy': _isBusy, 'shareMode': _shareMode, 'lat': _lat, 'lng': _lng, 'speedMps': _speedMps, 'sharedAt': _sharedAt?.format(), 'expiresAt': _expiresAt?.format(), 'createdAt': _createdAt?.format(), 'updatedAt': _updatedAt?.format()
   };
   
   Map<String, Object?> toMap() => {
     'id': id,
     'participantName': _participantName,
     'utilityId': _utilityId,
+    'destinationStopId': _destinationStopId,
+    'statusMessage': _statusMessage,
+    'isBusy': _isBusy,
+    'shareMode': _shareMode,
     'lat': _lat,
     'lng': _lng,
+    'speedMps': _speedMps,
     'sharedAt': _sharedAt,
     'expiresAt': _expiresAt,
     'createdAt': _createdAt,
@@ -239,8 +313,13 @@ class ParticipantLocationEvent extends amplify_core.Model {
   static final ID = amplify_core.QueryField(fieldName: "id");
   static final PARTICIPANTNAME = amplify_core.QueryField(fieldName: "participantName");
   static final UTILITYID = amplify_core.QueryField(fieldName: "utilityId");
+  static final DESTINATIONSTOPID = amplify_core.QueryField(fieldName: "destinationStopId");
+  static final STATUSMESSAGE = amplify_core.QueryField(fieldName: "statusMessage");
+  static final ISBUSY = amplify_core.QueryField(fieldName: "isBusy");
+  static final SHAREMODE = amplify_core.QueryField(fieldName: "shareMode");
   static final LAT = amplify_core.QueryField(fieldName: "lat");
   static final LNG = amplify_core.QueryField(fieldName: "lng");
+  static final SPEEDMPS = amplify_core.QueryField(fieldName: "speedMps");
   static final SHAREDAT = amplify_core.QueryField(fieldName: "sharedAt");
   static final EXPIRESAT = amplify_core.QueryField(fieldName: "expiresAt");
   static var schema = amplify_core.Model.defineSchema(define: (amplify_core.ModelSchemaDefinition modelSchemaDefinition) {
@@ -249,12 +328,17 @@ class ParticipantLocationEvent extends amplify_core.Model {
     
     modelSchemaDefinition.authRules = [
       amplify_core.AuthRule(
-        authStrategy: amplify_core.AuthStrategy.PUBLIC,
-        provider: amplify_core.AuthRuleProvider.APIKEY,
+        authStrategy: amplify_core.AuthStrategy.OWNER,
+        ownerField: "owner",
+        identityClaim: "cognito:username",
+        provider: amplify_core.AuthRuleProvider.USERPOOLS,
         operations: const [
           amplify_core.ModelOperation.CREATE,
-          amplify_core.ModelOperation.UPDATE,
-          amplify_core.ModelOperation.DELETE,
+          amplify_core.ModelOperation.DELETE
+        ]),
+      amplify_core.AuthRule(
+        authStrategy: amplify_core.AuthStrategy.PRIVATE,
+        operations: const [
           amplify_core.ModelOperation.READ
         ])
     ];
@@ -274,6 +358,30 @@ class ParticipantLocationEvent extends amplify_core.Model {
     ));
     
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
+      key: ParticipantLocationEvent.DESTINATIONSTOPID,
+      isRequired: false,
+      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.string)
+    ));
+    
+    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
+      key: ParticipantLocationEvent.STATUSMESSAGE,
+      isRequired: false,
+      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.string)
+    ));
+    
+    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
+      key: ParticipantLocationEvent.ISBUSY,
+      isRequired: false,
+      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.bool)
+    ));
+    
+    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
+      key: ParticipantLocationEvent.SHAREMODE,
+      isRequired: true,
+      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.string)
+    ));
+    
+    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
       key: ParticipantLocationEvent.LAT,
       isRequired: true,
       ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.double)
@@ -282,6 +390,12 @@ class ParticipantLocationEvent extends amplify_core.Model {
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
       key: ParticipantLocationEvent.LNG,
       isRequired: true,
+      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.double)
+    ));
+    
+    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
+      key: ParticipantLocationEvent.SPEEDMPS,
+      isRequired: false,
       ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.double)
     ));
     

@@ -1,18 +1,18 @@
 const amplifyConfig = r'''{
   "auth": {
-    "user_pool_id": "us-east-1_XQ4v4z0Lu",
+    "user_pool_id": "us-east-1_DEobSEwDX",
     "aws_region": "us-east-1",
-    "user_pool_client_id": "14r71m9rg56evpivaf60t48ak6",
-    "identity_pool_id": "us-east-1:cec54f1e-c922-4c06-b89e-bb20c8065dc1",
+    "user_pool_client_id": "1n7an49kft6c6h37rjchovq7hv",
+    "identity_pool_id": "us-east-1:ae7d9b70-154a-4ef1-84b4-5b6d1d615170",
     "mfa_methods": [],
-    "standard_required_attributes": [
-      "email"
-    ],
+    "standard_required_attributes": [],
     "username_attributes": [
-      "email"
+      "email",
+      "phone_number"
     ],
     "user_verification_types": [
-      "email"
+      "email",
+      "phone_number"
     ],
     "groups": [],
     "mfa_configuration": "NONE",
@@ -26,19 +26,17 @@ const amplifyConfig = r'''{
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://pekbbpninjcfhld3f4u6vnvdbu.appsync-api.us-east-1.amazonaws.com/graphql",
+    "url": "https://jmqtxotnyjhmjekb35k3xwsseq.appsync-api.us-east-1.amazonaws.com/graphql",
     "aws_region": "us-east-1",
-    "api_key": "da2-peyazqjzcbe4xhmwj6nlugteba",
-    "default_authorization_type": "API_KEY",
+    "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
-      "AMAZON_COGNITO_USER_POOLS",
       "AWS_IAM"
     ],
     "model_introspection": {
       "version": 1,
       "models": {
-        "UtilityInstance": {
-          "name": "UtilityInstance",
+        "OutingRecord": {
+          "name": "OutingRecord",
           "fields": {
             "id": {
               "name": "id",
@@ -61,26 +59,11 @@ const amplifyConfig = r'''{
               "isRequired": true,
               "attributes": []
             },
-            "participants": {
-              "name": "participants",
-              "isArray": true,
+            "payload": {
+              "name": "payload",
+              "isArray": false,
               "type": "String",
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true
-            },
-            "startsAt": {
-              "name": "startsAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": []
-            },
-            "endsAt": {
-              "name": "endsAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
+              "isRequired": true,
               "attributes": []
             },
             "closesAt": {
@@ -108,7 +91,7 @@ const amplifyConfig = r'''{
             }
           },
           "syncable": true,
-          "pluralName": "UtilityInstances",
+          "pluralName": "OutingRecords",
           "attributes": [
             {
               "type": "model",
@@ -119,8 +102,10 @@ const amplifyConfig = r'''{
               "properties": {
                 "rules": [
                   {
-                    "allow": "public",
-                    "provider": "apiKey",
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
                     "operations": [
                       "create",
                       "update",
@@ -158,7 +143,35 @@ const amplifyConfig = r'''{
             "utilityId": {
               "name": "utilityId",
               "isArray": false,
-              "type": "ID",
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "destinationStopId": {
+              "name": "destinationStopId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "statusMessage": {
+              "name": "statusMessage",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "isBusy": {
+              "name": "isBusy",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "shareMode": {
+              "name": "shareMode",
+              "isArray": false,
+              "type": "String",
               "isRequired": true,
               "attributes": []
             },
@@ -174,6 +187,13 @@ const amplifyConfig = r'''{
               "isArray": false,
               "type": "Float",
               "isRequired": true,
+              "attributes": []
+            },
+            "speedMps": {
+              "name": "speedMps",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
               "attributes": []
             },
             "sharedAt": {
@@ -219,12 +239,18 @@ const amplifyConfig = r'''{
               "properties": {
                 "rules": [
                   {
-                    "allow": "public",
-                    "provider": "apiKey",
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
                     "operations": [
                       "create",
-                      "update",
-                      "delete",
+                      "delete"
+                    ],
+                    "identityClaim": "cognito:username"
+                  },
+                  {
+                    "allow": "private",
+                    "operations": [
                       "read"
                     ]
                   }

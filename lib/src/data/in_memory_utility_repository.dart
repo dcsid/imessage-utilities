@@ -1,5 +1,6 @@
 import 'package:chat_utilities_hub/src/data/utility_repository.dart';
 import 'package:chat_utilities_hub/src/models/create_planning_board_input.dart';
+import 'package:chat_utilities_hub/src/models/expense_entry.dart';
 import 'package:chat_utilities_hub/src/models/geo_point.dart';
 import 'package:chat_utilities_hub/src/models/location_share_mode.dart';
 import 'package:chat_utilities_hub/src/models/participant_location_share.dart';
@@ -12,6 +13,21 @@ class InMemoryUtilityRepository implements UtilityRepository {
   InMemoryUtilityRepository() : _utilities = <UtilityInstance>[];
 
   final List<UtilityInstance> _utilities;
+
+  @override
+  bool get isHydrated => true;
+
+  @override
+  Future<void> hydrateForUser(
+    String? userId, {
+    Iterable<String> legacyStorageKeys = const <String>[],
+  }) async {}
+
+  void replaceAllUtilities(Iterable<UtilityInstance> utilities) {
+    _utilities
+      ..clear()
+      ..addAll(utilities);
+  }
 
   @override
   List<UtilityInstance> getAll() => List.unmodifiable(_utilities);
@@ -58,6 +74,8 @@ class InMemoryUtilityRepository implements UtilityRepository {
         intervalMinutes: input.intervalMinutes,
       ),
       responses: const [],
+      expenseTrackingEnabled: false,
+      expenses: const [],
       plannedStops: const [],
       locationShares: const [],
       closesAt: normalizedStart
@@ -74,6 +92,7 @@ class InMemoryUtilityRepository implements UtilityRepository {
     required String utilityId,
     required String title,
     required GeoPoint position,
+    String? address,
     String? note,
   }) {
     final index = _indexForUtility(utilityId);
@@ -83,6 +102,7 @@ class InMemoryUtilityRepository implements UtilityRepository {
       TripStop(
         id: '${utility.id}-stop-${stops.length + 1}-${DateTime.now().microsecondsSinceEpoch}',
         title: title.trim(),
+        address: _normalizedNote(address),
         note: _normalizedNote(note),
         position: position,
         order: stops.length + 1,
@@ -95,11 +115,131 @@ class InMemoryUtilityRepository implements UtilityRepository {
   }
 
   @override
+  UtilityInstance removeTripStop({
+    required String utilityId,
+    required String stopId,
+  }) {
+    final index = _indexForUtility(utilityId);
+    final utility = _utilities[index];
+    final remainingStops = utility.plannedStops
+        .where((stop) => stop.id != stopId)
+        .toList(growable: false);
+
+    if (remainingStops.length == utility.plannedStops.length) {
+      throw StateError('Unknown stop id: $stopId');
+    }
+
+    final reorderedStops = <TripStop>[
+      for (var i = 0; i < remainingStops.length; i++)
+        remainingStops[i].copyWith(order: i + 1),
+    ];
+    final remainingShares = utility.locationShares
+        .where((share) => share.stopId != stopId)
+        .toList(growable: false);
+
+    final updatedUtility = utility.copyWith(
+      plannedStops: reorderedStops,
+      locationShares: remainingShares,
+    );
+    _utilities[index] = updatedUtility;
+    return updatedUtility;
+  }
+
+  @override
+  UtilityInstance enableExpenseTracking({required String utilityId}) {
+    final index = _indexForUtility(utilityId);
+    final utility = _utilities[index];
+    final updatedUtility = utility.copyWith(expenseTrackingEnabled: true);
+    _utilities[index] = updatedUtility;
+    return updatedUtility;
+  }
+
+  @override
+  UtilityInstance addExpense({
+    required String utilityId,
+    required String title,
+    required double amount,
+    required String paidBy,
+    required List<String> splitBetween,
+    String? note,
+  }) {
+    final index = _indexForUtility(utilityId);
+    final utility = _utilities[index];
+    final normalizedTitle = title.trim();
+    final normalizedPayer = paidBy.trim();
+    final normalizedSplitBetween = splitBetween
+        .map((participant) => participant.trim())
+        .where((participant) => participant.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+
+    if (normalizedTitle.isEmpty) {
+      throw StateError('Add a short expense title.');
+    }
+    if (normalizedPayer.isEmpty) {
+      throw StateError('Choose who paid.');
+    }
+    if (amount <= 0) {
+      throw StateError('Enter an amount greater than zero.');
+    }
+
+    final participants = utility.participants.toList(growable: true);
+    if (!participants.contains(normalizedPayer)) {
+      participants.add(normalizedPayer);
+    }
+    for (final participant in normalizedSplitBetween) {
+      if (!participants.contains(participant)) {
+        participants.add(participant);
+      }
+    }
+
+    final expenses = utility.expenses.toList(growable: true)
+      ..add(
+        ExpenseEntry(
+          id: '${utility.id}-expense-${DateTime.now().microsecondsSinceEpoch}',
+          title: normalizedTitle,
+          amount: amount,
+          paidBy: normalizedPayer,
+          splitBetween: normalizedSplitBetween.isEmpty
+              ? <String>[normalizedPayer]
+              : normalizedSplitBetween,
+          addedAt: DateTime.now(),
+          note: _normalizedNote(note),
+        ),
+      );
+
+    final updatedUtility = utility.copyWith(
+      participants: participants,
+      expenses: expenses,
+      expenseTrackingEnabled: true,
+    );
+    _utilities[index] = updatedUtility;
+    return updatedUtility;
+  }
+
+  @override
+  UtilityInstance removeExpense({
+    required String utilityId,
+    required String expenseId,
+  }) {
+    final index = _indexForUtility(utilityId);
+    final utility = _utilities[index];
+    final expenses = utility.expenses
+        .where((expense) => expense.id != expenseId)
+        .toList(growable: false);
+    final updatedUtility = utility.copyWith(expenses: expenses);
+    _utilities[index] = updatedUtility;
+    return updatedUtility;
+  }
+
+  @override
   UtilityInstance saveLocationShare({
     required String utilityId,
     required String participantName,
     required LocationShareMode mode,
     required String stopId,
+    String? statusMessage,
+    required bool isBusy,
   }) {
     final index = _indexForUtility(utilityId);
     final utility = _utilities[index];
@@ -123,6 +263,8 @@ class InMemoryUtilityRepository implements UtilityRepository {
       mode: mode,
       stopId: stop.id,
       sharedAt: DateTime.now(),
+      statusMessage: _normalizedNote(statusMessage),
+      isBusy: isBusy,
     );
 
     if (existingIndex == -1) {

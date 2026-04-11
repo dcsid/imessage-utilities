@@ -9,10 +9,14 @@ import 'package:flutter/foundation.dart';
 
 class UtilityAppState extends ChangeNotifier {
   UtilityAppState({required UtilityRepository repository})
-    : _repository = repository;
+    : _repository = repository,
+      _isHydrated = repository.isHydrated;
 
   final UtilityRepository _repository;
   String? _selectedUtilityId;
+  bool _isHydrated;
+
+  bool get isHydrated => _isHydrated;
 
   List<UtilityInstance> get utilities => _repository.getAll();
 
@@ -25,6 +29,9 @@ class UtilityAppState extends ChangeNotifier {
   }
 
   UtilityRoutePath get currentPath {
+    if (!_isHydrated) {
+      return const UtilityRoutePath.home();
+    }
     final selectedUtilityId = _selectedUtilityId;
     if (selectedUtilityId == null ||
         _repository.findById(selectedUtilityId) == null) {
@@ -50,6 +57,9 @@ class UtilityAppState extends ChangeNotifier {
   }
 
   void openUtility(String utilityId) {
+    if (!_isHydrated) {
+      return;
+    }
     if (_repository.findById(utilityId) == null) {
       return;
     }
@@ -61,6 +71,28 @@ class UtilityAppState extends ChangeNotifier {
   void createPlanningBoard(CreatePlanningBoardInput input) {
     final utility = _repository.createPlanningBoard(input);
     _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
+  Future<void> hydrateForUser(
+    String? userId, {
+    Iterable<String> legacyStorageKeys = const <String>[],
+  }) async {
+    _isHydrated = false;
+    notifyListeners();
+
+    await _repository.hydrateForUser(
+      userId,
+      legacyStorageKeys: legacyStorageKeys,
+    );
+
+    final selectedUtilityId = _selectedUtilityId;
+    if (selectedUtilityId != null &&
+        _repository.findById(selectedUtilityId) == null) {
+      _selectedUtilityId = null;
+    }
+
+    _isHydrated = true;
     notifyListeners();
   }
 
@@ -82,13 +114,59 @@ class UtilityAppState extends ChangeNotifier {
     required String utilityId,
     required String title,
     required GeoPoint position,
+    String? address,
     String? note,
   }) {
     final utility = _repository.addTripStop(
       utilityId: utilityId,
       title: title,
       position: position,
+      address: address,
       note: note,
+    );
+    _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
+  void removeTripStop({required String utilityId, required String stopId}) {
+    final utility = _repository.removeTripStop(
+      utilityId: utilityId,
+      stopId: stopId,
+    );
+    _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
+  void enableExpenseTracking({required String utilityId}) {
+    final utility = _repository.enableExpenseTracking(utilityId: utilityId);
+    _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
+  void addExpense({
+    required String utilityId,
+    required String title,
+    required double amount,
+    required String paidBy,
+    required List<String> splitBetween,
+    String? note,
+  }) {
+    final utility = _repository.addExpense(
+      utilityId: utilityId,
+      title: title,
+      amount: amount,
+      paidBy: paidBy,
+      splitBetween: splitBetween,
+      note: note,
+    );
+    _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
+  void removeExpense({required String utilityId, required String expenseId}) {
+    final utility = _repository.removeExpense(
+      utilityId: utilityId,
+      expenseId: expenseId,
     );
     _selectedUtilityId = utility.id;
     notifyListeners();
@@ -99,12 +177,16 @@ class UtilityAppState extends ChangeNotifier {
     required String participantName,
     required LocationShareMode mode,
     required String stopId,
+    String? statusMessage,
+    required bool isBusy,
   }) {
     final utility = _repository.saveLocationShare(
       utilityId: utilityId,
       participantName: participantName,
       mode: mode,
       stopId: stopId,
+      statusMessage: statusMessage,
+      isBusy: isBusy,
     );
     _selectedUtilityId = utility.id;
     notifyListeners();

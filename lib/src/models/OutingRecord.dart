@@ -21,18 +21,15 @@
 
 import 'ModelProvider.dart';
 import 'package:amplify_core/amplify_core.dart' as amplify_core;
-import 'package:collection/collection.dart';
 
 
-/** This is an auto generated class representing the UtilityInstance type in your schema. */
-class UtilityInstance extends amplify_core.Model {
-  static const classType = const _UtilityInstanceModelType();
+/** This is an auto generated class representing the OutingRecord type in your schema. */
+class OutingRecord extends amplify_core.Model {
+  static const classType = const _OutingRecordModelType();
   final String id;
   final String? _title;
   final String? _createdBy;
-  final List<String>? _participants;
-  final amplify_core.TemporalDateTime? _startsAt;
-  final amplify_core.TemporalDateTime? _endsAt;
+  final String? _payload;
   final amplify_core.TemporalDateTime? _closesAt;
   final amplify_core.TemporalDateTime? _createdAt;
   final amplify_core.TemporalDateTime? _updatedAt;
@@ -44,8 +41,8 @@ class UtilityInstance extends amplify_core.Model {
   @override
   String getId() => id;
   
-  UtilityInstanceModelIdentifier get modelIdentifier {
-      return UtilityInstanceModelIdentifier(
+  OutingRecordModelIdentifier get modelIdentifier {
+      return OutingRecordModelIdentifier(
         id: id
       );
   }
@@ -76,16 +73,17 @@ class UtilityInstance extends amplify_core.Model {
     }
   }
   
-  List<String>? get participants {
-    return _participants;
-  }
-  
-  amplify_core.TemporalDateTime? get startsAt {
-    return _startsAt;
-  }
-  
-  amplify_core.TemporalDateTime? get endsAt {
-    return _endsAt;
+  String get payload {
+    try {
+      return _payload!;
+    } catch(e) {
+      throw amplify_core.AmplifyCodeGenModelException(
+          amplify_core.AmplifyExceptionMessages.codeGenRequiredFieldForceCastExceptionMessage,
+          recoverySuggestion:
+            amplify_core.AmplifyExceptionMessages.codeGenRequiredFieldForceCastRecoverySuggestion,
+          underlyingException: e.toString()
+          );
+    }
   }
   
   amplify_core.TemporalDateTime? get closesAt {
@@ -100,16 +98,14 @@ class UtilityInstance extends amplify_core.Model {
     return _updatedAt;
   }
   
-  const UtilityInstance._internal({required this.id, required title, required createdBy, participants, startsAt, endsAt, closesAt, createdAt, updatedAt}): _title = title, _createdBy = createdBy, _participants = participants, _startsAt = startsAt, _endsAt = endsAt, _closesAt = closesAt, _createdAt = createdAt, _updatedAt = updatedAt;
+  const OutingRecord._internal({required this.id, required title, required createdBy, required payload, closesAt, createdAt, updatedAt}): _title = title, _createdBy = createdBy, _payload = payload, _closesAt = closesAt, _createdAt = createdAt, _updatedAt = updatedAt;
   
-  factory UtilityInstance({String? id, required String title, required String createdBy, List<String>? participants, amplify_core.TemporalDateTime? startsAt, amplify_core.TemporalDateTime? endsAt, amplify_core.TemporalDateTime? closesAt}) {
-    return UtilityInstance._internal(
+  factory OutingRecord({String? id, required String title, required String createdBy, required String payload, amplify_core.TemporalDateTime? closesAt}) {
+    return OutingRecord._internal(
       id: id == null ? amplify_core.UUID.getUUID() : id,
       title: title,
       createdBy: createdBy,
-      participants: participants != null ? List<String>.unmodifiable(participants) : participants,
-      startsAt: startsAt,
-      endsAt: endsAt,
+      payload: payload,
       closesAt: closesAt);
   }
   
@@ -120,13 +116,11 @@ class UtilityInstance extends amplify_core.Model {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is UtilityInstance &&
+    return other is OutingRecord &&
       id == other.id &&
       _title == other._title &&
       _createdBy == other._createdBy &&
-      DeepCollectionEquality().equals(_participants, other._participants) &&
-      _startsAt == other._startsAt &&
-      _endsAt == other._endsAt &&
+      _payload == other._payload &&
       _closesAt == other._closesAt;
   }
   
@@ -137,13 +131,11 @@ class UtilityInstance extends amplify_core.Model {
   String toString() {
     var buffer = new StringBuffer();
     
-    buffer.write("UtilityInstance {");
+    buffer.write("OutingRecord {");
     buffer.write("id=" + "$id" + ", ");
     buffer.write("title=" + "$_title" + ", ");
     buffer.write("createdBy=" + "$_createdBy" + ", ");
-    buffer.write("participants=" + (_participants != null ? _participants!.toString() : "null") + ", ");
-    buffer.write("startsAt=" + (_startsAt != null ? _startsAt!.format() : "null") + ", ");
-    buffer.write("endsAt=" + (_endsAt != null ? _endsAt!.format() : "null") + ", ");
+    buffer.write("payload=" + "$_payload" + ", ");
     buffer.write("closesAt=" + (_closesAt != null ? _closesAt!.format() : "null") + ", ");
     buffer.write("createdAt=" + (_createdAt != null ? _createdAt!.format() : "null") + ", ");
     buffer.write("updatedAt=" + (_updatedAt != null ? _updatedAt!.format() : "null"));
@@ -152,79 +144,69 @@ class UtilityInstance extends amplify_core.Model {
     return buffer.toString();
   }
   
-  UtilityInstance copyWith({String? title, String? createdBy, List<String>? participants, amplify_core.TemporalDateTime? startsAt, amplify_core.TemporalDateTime? endsAt, amplify_core.TemporalDateTime? closesAt}) {
-    return UtilityInstance._internal(
+  OutingRecord copyWith({String? title, String? createdBy, String? payload, amplify_core.TemporalDateTime? closesAt}) {
+    return OutingRecord._internal(
       id: id,
       title: title ?? this.title,
       createdBy: createdBy ?? this.createdBy,
-      participants: participants ?? this.participants,
-      startsAt: startsAt ?? this.startsAt,
-      endsAt: endsAt ?? this.endsAt,
+      payload: payload ?? this.payload,
       closesAt: closesAt ?? this.closesAt);
   }
   
-  UtilityInstance copyWithModelFieldValues({
+  OutingRecord copyWithModelFieldValues({
     ModelFieldValue<String>? title,
     ModelFieldValue<String>? createdBy,
-    ModelFieldValue<List<String>?>? participants,
-    ModelFieldValue<amplify_core.TemporalDateTime?>? startsAt,
-    ModelFieldValue<amplify_core.TemporalDateTime?>? endsAt,
+    ModelFieldValue<String>? payload,
     ModelFieldValue<amplify_core.TemporalDateTime?>? closesAt
   }) {
-    return UtilityInstance._internal(
+    return OutingRecord._internal(
       id: id,
       title: title == null ? this.title : title.value,
       createdBy: createdBy == null ? this.createdBy : createdBy.value,
-      participants: participants == null ? this.participants : participants.value,
-      startsAt: startsAt == null ? this.startsAt : startsAt.value,
-      endsAt: endsAt == null ? this.endsAt : endsAt.value,
+      payload: payload == null ? this.payload : payload.value,
       closesAt: closesAt == null ? this.closesAt : closesAt.value
     );
   }
   
-  UtilityInstance.fromJson(Map<String, dynamic> json)  
+  OutingRecord.fromJson(Map<String, dynamic> json)  
     : id = json['id'],
       _title = json['title'],
       _createdBy = json['createdBy'],
-      _participants = json['participants']?.cast<String>(),
-      _startsAt = json['startsAt'] != null ? amplify_core.TemporalDateTime.fromString(json['startsAt']) : null,
-      _endsAt = json['endsAt'] != null ? amplify_core.TemporalDateTime.fromString(json['endsAt']) : null,
+      _payload = json['payload'],
       _closesAt = json['closesAt'] != null ? amplify_core.TemporalDateTime.fromString(json['closesAt']) : null,
       _createdAt = json['createdAt'] != null ? amplify_core.TemporalDateTime.fromString(json['createdAt']) : null,
       _updatedAt = json['updatedAt'] != null ? amplify_core.TemporalDateTime.fromString(json['updatedAt']) : null;
   
   Map<String, dynamic> toJson() => {
-    'id': id, 'title': _title, 'createdBy': _createdBy, 'participants': _participants, 'startsAt': _startsAt?.format(), 'endsAt': _endsAt?.format(), 'closesAt': _closesAt?.format(), 'createdAt': _createdAt?.format(), 'updatedAt': _updatedAt?.format()
+    'id': id, 'title': _title, 'createdBy': _createdBy, 'payload': _payload, 'closesAt': _closesAt?.format(), 'createdAt': _createdAt?.format(), 'updatedAt': _updatedAt?.format()
   };
   
   Map<String, Object?> toMap() => {
     'id': id,
     'title': _title,
     'createdBy': _createdBy,
-    'participants': _participants,
-    'startsAt': _startsAt,
-    'endsAt': _endsAt,
+    'payload': _payload,
     'closesAt': _closesAt,
     'createdAt': _createdAt,
     'updatedAt': _updatedAt
   };
 
-  static final amplify_core.QueryModelIdentifier<UtilityInstanceModelIdentifier> MODEL_IDENTIFIER = amplify_core.QueryModelIdentifier<UtilityInstanceModelIdentifier>();
+  static final amplify_core.QueryModelIdentifier<OutingRecordModelIdentifier> MODEL_IDENTIFIER = amplify_core.QueryModelIdentifier<OutingRecordModelIdentifier>();
   static final ID = amplify_core.QueryField(fieldName: "id");
   static final TITLE = amplify_core.QueryField(fieldName: "title");
   static final CREATEDBY = amplify_core.QueryField(fieldName: "createdBy");
-  static final PARTICIPANTS = amplify_core.QueryField(fieldName: "participants");
-  static final STARTSAT = amplify_core.QueryField(fieldName: "startsAt");
-  static final ENDSAT = amplify_core.QueryField(fieldName: "endsAt");
+  static final PAYLOAD = amplify_core.QueryField(fieldName: "payload");
   static final CLOSESAT = amplify_core.QueryField(fieldName: "closesAt");
   static var schema = amplify_core.Model.defineSchema(define: (amplify_core.ModelSchemaDefinition modelSchemaDefinition) {
-    modelSchemaDefinition.name = "UtilityInstance";
-    modelSchemaDefinition.pluralName = "UtilityInstances";
+    modelSchemaDefinition.name = "OutingRecord";
+    modelSchemaDefinition.pluralName = "OutingRecords";
     
     modelSchemaDefinition.authRules = [
       amplify_core.AuthRule(
-        authStrategy: amplify_core.AuthStrategy.PUBLIC,
-        provider: amplify_core.AuthRuleProvider.APIKEY,
+        authStrategy: amplify_core.AuthStrategy.OWNER,
+        ownerField: "owner",
+        identityClaim: "cognito:username",
+        provider: amplify_core.AuthRuleProvider.USERPOOLS,
         operations: const [
           amplify_core.ModelOperation.CREATE,
           amplify_core.ModelOperation.UPDATE,
@@ -236,38 +218,25 @@ class UtilityInstance extends amplify_core.Model {
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.id());
     
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
-      key: UtilityInstance.TITLE,
+      key: OutingRecord.TITLE,
       isRequired: true,
       ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.string)
     ));
     
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
-      key: UtilityInstance.CREATEDBY,
+      key: OutingRecord.CREATEDBY,
       isRequired: true,
       ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.string)
     ));
     
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
-      key: UtilityInstance.PARTICIPANTS,
-      isRequired: false,
-      isArray: true,
-      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.collection, ofModelName: amplify_core.ModelFieldTypeEnum.string.name)
+      key: OutingRecord.PAYLOAD,
+      isRequired: true,
+      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.string)
     ));
     
     modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
-      key: UtilityInstance.STARTSAT,
-      isRequired: false,
-      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.dateTime)
-    ));
-    
-    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
-      key: UtilityInstance.ENDSAT,
-      isRequired: false,
-      ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.dateTime)
-    ));
-    
-    modelSchemaDefinition.addField(amplify_core.ModelFieldDefinition.field(
-      key: UtilityInstance.CLOSESAT,
+      key: OutingRecord.CLOSESAT,
       isRequired: false,
       ofType: amplify_core.ModelFieldType(amplify_core.ModelFieldTypeEnum.dateTime)
     ));
@@ -288,29 +257,29 @@ class UtilityInstance extends amplify_core.Model {
   });
 }
 
-class _UtilityInstanceModelType extends amplify_core.ModelType<UtilityInstance> {
-  const _UtilityInstanceModelType();
+class _OutingRecordModelType extends amplify_core.ModelType<OutingRecord> {
+  const _OutingRecordModelType();
   
   @override
-  UtilityInstance fromJson(Map<String, dynamic> jsonData) {
-    return UtilityInstance.fromJson(jsonData);
+  OutingRecord fromJson(Map<String, dynamic> jsonData) {
+    return OutingRecord.fromJson(jsonData);
   }
   
   @override
   String modelName() {
-    return 'UtilityInstance';
+    return 'OutingRecord';
   }
 }
 
 /**
  * This is an auto generated class representing the model identifier
- * of [UtilityInstance] in your schema.
+ * of [OutingRecord] in your schema.
  */
-class UtilityInstanceModelIdentifier implements amplify_core.ModelIdentifier<UtilityInstance> {
+class OutingRecordModelIdentifier implements amplify_core.ModelIdentifier<OutingRecord> {
   final String id;
 
-  /** Create an instance of UtilityInstanceModelIdentifier using [id] the primary key. */
-  const UtilityInstanceModelIdentifier({
+  /** Create an instance of OutingRecordModelIdentifier using [id] the primary key. */
+  const OutingRecordModelIdentifier({
     required this.id});
   
   @override
@@ -328,7 +297,7 @@ class UtilityInstanceModelIdentifier implements amplify_core.ModelIdentifier<Uti
   String serializeAsString() => serializeAsMap().values.join('#');
   
   @override
-  String toString() => 'UtilityInstanceModelIdentifier(id: $id)';
+  String toString() => 'OutingRecordModelIdentifier(id: $id)';
   
   @override
   bool operator ==(Object other) {
@@ -336,7 +305,7 @@ class UtilityInstanceModelIdentifier implements amplify_core.ModelIdentifier<Uti
       return true;
     }
     
-    return other is UtilityInstanceModelIdentifier &&
+    return other is OutingRecordModelIdentifier &&
       id == other.id;
   }
   

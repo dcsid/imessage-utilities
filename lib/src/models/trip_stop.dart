@@ -6,6 +6,7 @@ class TripStop {
     required this.title,
     required this.position,
     required this.order,
+    this.address,
     this.note,
   });
 
@@ -13,6 +14,7 @@ class TripStop {
   final String title;
   final GeoPoint position;
   final int order;
+  final String? address;
   final String? note;
 
   TripStop copyWith({
@@ -20,6 +22,7 @@ class TripStop {
     String? title,
     GeoPoint? position,
     int? order,
+    String? address,
     String? note,
   }) {
     return TripStop(
@@ -27,6 +30,7 @@ class TripStop {
       title: title ?? this.title,
       position: position ?? this.position,
       order: order ?? this.order,
+      address: address ?? this.address,
       note: note ?? this.note,
     );
   }

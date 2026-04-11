@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chat_utilities_hub/src/auth/auth_controller.dart';
 import 'package:chat_utilities_hub/src/auth/auth_screen.dart';
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
@@ -30,6 +32,7 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
   late final UtilityAppState _appState;
   late final UtilityRouterDelegate _routerDelegate;
   PlatformRouteInformationProvider? _routeInformationProvider;
+  String? _hydratedUserId;
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
       repository: widget.repository ?? InMemoryUtilityRepository(),
     );
     _routerDelegate = UtilityRouterDelegate(_appState, _authController);
+    _authController.addListener(_handleAuthStateChanged);
 
     final initialLink = widget.initialLink;
     if (initialLink != null) {
@@ -48,15 +52,39 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
     }
 
     _authController.initialize();
+    _handleAuthStateChanged();
   }
 
   @override
   void dispose() {
+    _authController.removeListener(_handleAuthStateChanged);
     _routeInformationProvider?.dispose();
     _routerDelegate.dispose();
     _authController.dispose();
     _appState.dispose();
     super.dispose();
+  }
+
+  void _handleAuthStateChanged() {
+    if (_authController.isEnabled &&
+        _authController.status == AuthStatus.loading) {
+      return;
+    }
+
+    final nextUserId = _authController.isEnabled
+        ? (_authController.isSignedIn ? _authController.userId : null)
+        : 'local';
+    if (_hydratedUserId == nextUserId) {
+      return;
+    }
+
+    _hydratedUserId = nextUserId;
+    unawaited(
+      _appState.hydrateForUser(
+        nextUserId,
+        legacyStorageKeys: _authController.storageAliases,
+      ),
+    );
   }
 
   @override
@@ -108,10 +136,7 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(
-              color: AppPalette.primary,
-              width: 1.2,
-            ),
+            borderSide: const BorderSide(color: AppPalette.primary, width: 1.2),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
@@ -207,12 +232,38 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
   @override
   Widget build(BuildContext context) {
     if (_authController.isEnabled && !_authController.isSignedIn) {
+      if (_authController.status == AuthStatus.loading) {
+        return Navigator(
+          key: navigatorKey,
+          pages: [
+            const MaterialPage<void>(
+              key: ValueKey('auth-loading-page'),
+              child: _AppLoadingScreen(message: 'Checking your account...'),
+            ),
+          ],
+          onDidRemovePage: (page) {},
+        );
+      }
+
       return Navigator(
         key: navigatorKey,
         pages: [
           MaterialPage<void>(
             key: const ValueKey('auth-page'),
             child: AuthScreen(controller: _authController),
+          ),
+        ],
+        onDidRemovePage: (page) {},
+      );
+    }
+
+    if (!_appState.isHydrated) {
+      return Navigator(
+        key: navigatorKey,
+        pages: [
+          const MaterialPage<void>(
+            key: ValueKey('outings-loading-page'),
+            child: _AppLoadingScreen(message: 'Loading your outings...'),
           ),
         ],
         onDidRemovePage: (page) {},
@@ -230,7 +281,7 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
             utilities: _appState.utilities,
             onOpenUtility: _appState.openUtility,
             onCreateBoard: _appState.createPlanningBoard,
-            userEmail: _authController.userEmail,
+            userContact: _authController.userContact,
             onSignOut: _authController.isEnabled
                 ? () {
                     _appState.showHome();
@@ -247,6 +298,10 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
               onBack: _appState.showHome,
               onSaveResponse: _appState.saveResponse,
               onAddTripStop: _appState.addTripStop,
+              onRemoveTripStop: _appState.removeTripStop,
+              onEnableExpenseTracking: _appState.enableExpenseTracking,
+              onAddExpense: _appState.addExpense,
+              onRemoveExpense: _appState.removeExpense,
               onSaveLocationShare: _appState.saveLocationShare,
               onEndLocationShare: _appState.endLocationShare,
             ),
@@ -265,5 +320,27 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
     _appState.removeListener(notifyListeners);
     _authController.removeListener(notifyListeners);
     super.dispose();
+  }
+}
+
+class _AppLoadingScreen extends StatelessWidget {
+  const _AppLoadingScreen({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(message),
+          ],
+        ),
+      ),
+    );
   }
 }
