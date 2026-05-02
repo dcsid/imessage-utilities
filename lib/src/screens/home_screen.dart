@@ -7,6 +7,8 @@ import 'package:chat_utilities_hub/src/presentation/app_surface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+const _tabularNumerals = [FontFeature.tabularFigures()];
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
     super.key,
@@ -31,41 +33,38 @@ class HomeScreen extends StatelessWidget {
           bottom: false,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 980),
+              constraints: const BoxConstraints(maxWidth: 720),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                padding: const EdgeInsets.fromLTRB(22, 24, 22, 48),
                 children: [
-                  _Header(
+                  _Wordmark(
                     userContact: userContact,
-                    onCreateOuting: () => _showCreateBoardSheet(context),
                     onSignOut: onSignOut,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 36),
+                  _Headline(
+                    onCreateOuting: () => _showCreateBoardSheet(context),
+                    hasOutings: utilities.isNotEmpty,
+                  ),
+                  const SizedBox(height: 28),
                   if (utilities.isNotEmpty) ...[
-                    _DashboardStats(utilities: utilities),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Your outings',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (utilities.isEmpty)
-                    _EmptyState(
-                      onCreateOuting: () => _showCreateBoardSheet(context),
-                    )
-                  else
+                    _StatTicker(utilities: utilities),
+                    const SizedBox(height: 28),
+                    const _SectionRule(label: 'Your outings'),
+                    const SizedBox(height: 18),
                     ...utilities.map(
                       (utility) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _OutingCard(
+                        padding: const EdgeInsets.only(bottom: 22),
+                        child: _OutingSticker(
                           utility: utility,
                           onOpen: () => onOpenUtility(utility.id),
                           onCopyLink: () => _copyOutingLink(context, utility),
                         ),
                       ),
+                    ),
+                  ] else
+                    _EmptyState(
+                      onCreateOuting: () => _showCreateBoardSheet(context),
                     ),
                 ],
               ),
@@ -129,125 +128,391 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.onCreateOuting,
-    this.userContact,
-    this.onSignOut,
-  });
+/// Top-of-page wordmark + the user's account chip.
+class _Wordmark extends StatelessWidget {
+  const _Wordmark({this.userContact, this.onSignOut});
 
-  final VoidCallback onCreateOuting;
   final String? userContact;
   final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return AppSurface(
-      padding: const EdgeInsets.all(24),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 720;
-          final copy = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Outings',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Every outing starts the same way: name it, find the best time on the availability board, then add places, GPS sharing, and optional costs only if the group needs them.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppPalette.mutedText,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          );
-
-          final actions = Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              FilledButton.icon(
-                onPressed: onCreateOuting,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('New outing'),
-              ),
-              if (userContact != null)
-                OutlinedButton.icon(
-                  onPressed: onSignOut,
-                  icon: const Icon(Icons.logout_rounded),
-                  label: Text(userContact!),
-                ),
-            ],
-          );
-
-          if (isWide) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: copy),
-                const SizedBox(width: 16),
-                actions,
-              ],
-            );
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [copy, const SizedBox(height: 18), actions],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _DashboardStats extends StatelessWidget {
-  const _DashboardStats({required this.utilities});
-
-  final List<UtilityInstance> utilities;
-
-  @override
-  Widget build(BuildContext context) {
-    final totalResponses = utilities.fold<int>(
-      0,
-      (total, utility) => total + utility.responseCount,
-    );
-    final totalStops = utilities.fold<int>(
-      0,
-      (total, utility) => total + utility.stopCount,
-    );
-    final totalExpenses = utilities.fold<int>(
-      0,
-      (total, utility) => total + utility.expenseCount,
-    );
-    final activeShares = utilities.fold<int>(
-      0,
-      (total, utility) => total + utility.activeLocationShareCount,
-    );
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _MetricPill(label: '${utilities.length} outings'),
-        _MetricPill(label: '$totalResponses responses'),
-        _MetricPill(label: '$totalStops places planned'),
-        _MetricPill(label: '$activeShares live shares'),
-        _MetricPill(label: '$totalExpenses expenses logged'),
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppPalette.ink,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            'p',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: AppPalette.canvas,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Plan Together',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w700,
+            color: AppPalette.ink,
+          ),
+        ),
+        const Spacer(),
+        if (userContact != null)
+          _AccountChip(contact: userContact!, onSignOut: onSignOut),
       ],
     );
   }
 }
 
-class _OutingCard extends StatelessWidget {
-  const _OutingCard({
+class _AccountChip extends StatelessWidget {
+  const _AccountChip({required this.contact, this.onSignOut});
+
+  final String contact;
+  final VoidCallback? onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = contact.isEmpty ? '?' : contact[0].toUpperCase();
+    return InkWell(
+      onTap: onSignOut,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppPalette.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppPalette.border, width: 1.4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppPalette.ink,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: AppPalette.canvas,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Text(
+                'Sign out',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppPalette.ink,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Editorial display headline + primary "Start an outing" CTA.
+class _Headline extends StatelessWidget {
+  const _Headline({required this.onCreateOuting, required this.hasOutings});
+
+  final VoidCallback onCreateOuting;
+  final bool hasOutings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          hasOutings ? 'PLANS IN MOTION' : 'A QUIET DASHBOARD',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: AppPalette.mutedText,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2.0,
+          ),
+        ),
+        const SizedBox(height: 14),
+        RichText(
+          text: TextSpan(
+            style: theme.textTheme.displaySmall?.copyWith(
+              color: AppPalette.ink,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+              fontSize: 44,
+            ),
+            children: [
+              const TextSpan(text: 'Where '),
+              TextSpan(
+                text: 'when',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: AppPalette.primary,
+                ),
+              ),
+              const TextSpan(text: '\nmeets '),
+              TextSpan(
+                text: 'where',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: AppPalette.primary,
+                ),
+              ),
+              const TextSpan(text: '.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Pick a name. Find the time. Drop the pin. Share the moment.',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: AppPalette.mutedText,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 22),
+        _PrimaryAction(
+          label: 'Start a new outing',
+          onPressed: onCreateOuting,
+        ),
+      ],
+    );
+  }
+}
+
+/// Big chunky CTA — ink fill, hard offset shadow, no rounded-rect blandness.
+class _PrimaryAction extends StatelessWidget {
+  const _PrimaryAction({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppPalette.ink,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: AppPalette.primary,
+                offset: Offset(5, 6),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppPalette.canvas,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    letterSpacing: 0.1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppPalette.canvas,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: AppPalette.ink,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal numeric ticker — large display numerals with tabular figures
+/// and small labels underneath, separated by ink hairlines.
+class _StatTicker extends StatelessWidget {
+  const _StatTicker({required this.utilities});
+
+  final List<UtilityInstance> utilities;
+
+  @override
+  Widget build(BuildContext context) {
+    final responses = utilities.fold<int>(
+      0,
+      (total, u) => total + u.responseCount,
+    );
+    final stops = utilities.fold<int>(0, (total, u) => total + u.stopCount);
+    final shares = utilities.fold<int>(
+      0,
+      (total, u) => total + u.activeLocationShareCount,
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 18),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: AppPalette.ink, width: 1.4),
+          bottom: BorderSide(color: AppPalette.ink, width: 1.4),
+        ),
+      ),
+      child: Row(
+        children: [
+          _StatCell(value: utilities.length, label: 'OUTINGS'),
+          const _StatDivider(),
+          _StatCell(value: responses, label: 'RESPONSES'),
+          const _StatDivider(),
+          _StatCell(value: stops, label: 'PLACES'),
+          const _StatDivider(),
+          _StatCell(value: shares, label: 'LIVE'),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.value, required this.label});
+
+  final int value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              value.toString().padLeft(2, '0'),
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontFeatures: _tabularNumerals,
+                color: AppPalette.ink,
+                height: 1.0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppPalette.mutedText,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 44,
+      color: AppPalette.borderSoft,
+    );
+  }
+}
+
+/// Section rule — small label sitting on a hairline. Replaces the
+/// boilerplate "titleLarge bold heading."
+class _SectionRule extends StatelessWidget {
+  const _SectionRule({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontStyle: FontStyle.italic,
+            fontWeight: FontWeight.w600,
+            color: AppPalette.ink,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(height: 1, color: AppPalette.borderSoft),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: AppPalette.ink,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The whole outing card: gradient sticker header up top, cream body
+/// underneath. Outer wrap carries the ink stroke, hard shadow, and
+/// colored bloom from the outing's accent.
+class _OutingSticker extends StatelessWidget {
+  const _OutingSticker({
     required this.utility,
     required this.onOpen,
     required this.onCopyLink,
@@ -260,110 +525,114 @@ class _OutingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent = AppPalette.accentFor(utility.id);
+    final dateLabel = _formatDateRange(utility);
+
     final topScore = utility.optionScores.isEmpty
         ? null
         : utility.optionScores.first;
     final bestOverlap = utility.participants.isEmpty
-        ? 'No participants yet'
+        ? 'Add participants to start collecting'
         : topScore == null
         ? 'No time slots yet'
-        : '${topScore.votes}/${utility.participants.length} available';
+        : '${topScore.votes} of ${utility.participants.length} agree on the top window';
     final nextStep = utility.responseCount == 0
         ? 'Collect the first availability response'
         : utility.stopCount == 0
         ? 'Add the first destination'
         : utility.expenseTrackingEnabled && utility.expenseCount == 0
-        ? 'Add expenses only if this outing needs them'
-        : 'Open the outing and keep planning';
+        ? 'Log expenses if the group needs them'
+        : 'Open and keep planning';
 
-    return AppSurface(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            utility.title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppPalette.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppPalette.border, width: 1.6),
+        boxShadow: [
+          const BoxShadow(
+            color: AppPalette.border,
+            offset: Offset(5, 6),
+            blurRadius: 0,
           ),
-          const SizedBox(height: 8),
-          Text(
-            _formatDateRange(utility),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppPalette.mutedText,
-            ),
+          BoxShadow(
+            color: accent.base.withValues(alpha: 0.22),
+            offset: const Offset(0, 22),
+            blurRadius: 38,
+            spreadRadius: -10,
           ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _MetricPill(
-                label:
-                    '${utility.responseCount}/${utility.participants.length} responded',
-              ),
-              _MetricPill(label: bestOverlap),
-              _MetricPill(label: '${utility.stopCount} places'),
-              _MetricPill(
-                label: utility.expenseTrackingEnabled
-                    ? '${utility.expenseCount} expenses'
-                    : 'Expenses off',
-              ),
-              _MetricPill(label: 'Organizer: ${utility.createdBy}'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppPalette.surfaceMuted,
-              borderRadius: BorderRadius.circular(18),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _OutingHeader(
+              accent: accent,
+              title: utility.title,
+              dateLabel: dateLabel,
+              organizer: utility.createdBy,
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.flag_rounded, color: AppPalette.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Next step',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppPalette.mutedText,
-                          fontWeight: FontWeight.w700,
-                        ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _NextStepCallout(accent: accent, nextStep: nextStep),
+                  const SizedBox(height: 18),
+                  _StatRow(
+                    accent: accent,
+                    items: [
+                      _StatRowItem(
+                        value:
+                            '${utility.responseCount}/${utility.participants.length}',
+                        label: 'responded',
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        nextStep,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                      _StatRowItem(
+                        value: utility.stopCount.toString(),
+                        label: 'places',
+                      ),
+                      _StatRowItem(
+                        value: utility.activeLocationShareCount.toString(),
+                        label: 'live',
+                      ),
+                      _StatRowItem(
+                        value: utility.expenseTrackingEnabled
+                            ? utility.expenseCount.toString()
+                            : '—',
+                        label: 'expenses',
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              FilledButton(onPressed: onOpen, child: const Text('Open outing')),
-              OutlinedButton.icon(
-                onPressed: onCopyLink,
-                icon: const Icon(Icons.copy_rounded),
-                label: const Text('Copy invite link'),
+                  const SizedBox(height: 14),
+                  Text(
+                    bestOverlap,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppPalette.mutedText,
+                      fontStyle: FontStyle.italic,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _OpenButton(accent: accent, onPressed: onOpen),
+                      ),
+                      const SizedBox(width: 10),
+                      _IconAction(
+                        icon: Icons.link_rounded,
+                        tooltip: 'Copy invite link',
+                        onPressed: onCopyLink,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -372,55 +641,343 @@ class _OutingCard extends StatelessWidget {
     final startsAt = utility.startsAt;
     final endsAt = utility.endsAt;
     if (startsAt == null || endsAt == null) {
-      return 'Weekly outing board';
+      return 'Weekly board';
     }
-
     final startMonth = _monthLabel(startsAt.month);
     final endMonth = _monthLabel(endsAt.month);
     if (startsAt.month == endsAt.month) {
-      return '$startMonth ${startsAt.day}-${endsAt.day}';
+      return '$startMonth ${startsAt.day}–${endsAt.day}';
     }
-
-    return '$startMonth ${startsAt.day} - $endMonth ${endsAt.day}';
+    return '$startMonth ${startsAt.day} – $endMonth ${endsAt.day}';
   }
 
   String _monthLabel(int month) {
     const labels = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
     ];
     return labels[month - 1];
   }
 }
 
-class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.label});
+class _OutingHeader extends StatelessWidget {
+  const _OutingHeader({
+    required this.accent,
+    required this.title,
+    required this.dateLabel,
+    required this.organizer,
+  });
+
+  final OutingAccent accent;
+  final String title;
+  final String dateLabel;
+  final String organizer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accent.base,
+            Color.lerp(accent.base, accent.ink, 0.45) ?? accent.base,
+          ],
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _MonogramChip(
+                      label: dateLabel,
+                      foreground: Colors.white,
+                      borderColor: Colors.white.withValues(alpha: 0.55),
+                    ),
+                    const SizedBox(width: 8),
+                    _MonogramChip(
+                      label: 'BY ${organizer.toUpperCase()}',
+                      foreground: Colors.white,
+                      borderColor: Colors.white.withValues(alpha: 0.55),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    height: 1.05,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          OutingGlyph(accent: accent, size: 52),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonogramChip extends StatelessWidget {
+  const _MonogramChip({
+    required this.label,
+    required this.foreground,
+    required this.borderColor,
+  });
 
   final String label;
+  final Color foreground;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppPalette.surfaceMuted,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor, width: 1),
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: AppPalette.text,
+        style: TextStyle(
+          color: foreground,
           fontWeight: FontWeight.w700,
+          fontSize: 10.5,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _NextStepCallout extends StatelessWidget {
+  const _NextStepCallout({required this.accent, required this.nextStep});
+
+  final OutingAccent accent;
+  final String nextStep;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 16, 14),
+      decoration: BoxDecoration(
+        color: accent.soft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.base.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.base,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.north_east_rounded,
+              color: Colors.white,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'NEXT',
+                  style: TextStyle(
+                    color: accent.ink,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
+                    letterSpacing: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  nextStep,
+                  style: TextStyle(
+                    color: accent.ink,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatRowItem {
+  const _StatRowItem({required this.value, required this.label});
+  final String value;
+  final String label;
+}
+
+class _StatRow extends StatelessWidget {
+  const _StatRow({required this.accent, required this.items});
+
+  final OutingAccent accent;
+  final List<_StatRowItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0)
+            Container(
+              width: 1,
+              height: 30,
+              color: AppPalette.borderSoft,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  items[i].value,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: _tabularNumerals,
+                    color: AppPalette.ink,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  items[i].label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppPalette.mutedText,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _OpenButton extends StatelessWidget {
+  const _OpenButton({required this.accent, required this.onPressed});
+
+  final OutingAccent accent;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppPalette.ink,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: accent.base.withValues(alpha: 0.95),
+                offset: const Offset(3, 4),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Open',
+                style: TextStyle(
+                  color: AppPalette.canvas,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: AppPalette.canvas,
+                size: 18,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconAction extends StatelessWidget {
+  const _IconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            width: 50,
+            height: 50,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppPalette.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppPalette.border, width: 1.4),
+            ),
+            child: Icon(icon, color: AppPalette.ink, size: 20),
+          ),
         ),
       ),
     );
@@ -434,30 +991,40 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AppSurface(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'No outings yet',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            'A blank week,',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: AppPalette.mutedText,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: 8),
           Text(
-            'Create the first outing, give it a name, and start with the availability board before you worry about destinations, GPS sharing, or optional costs.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            'wide open.',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: AppPalette.ink,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Spin up your first outing — name it, drop in a few names, and the availability board takes it from there.',
+            style: theme.textTheme.bodyLarge?.copyWith(
               color: AppPalette.mutedText,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
+          const SizedBox(height: 20),
+          _PrimaryAction(
+            label: 'Create your first outing',
             onPressed: onCreateOuting,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Create outing'),
           ),
         ],
       ),
@@ -556,29 +1123,51 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final theme = Theme.of(context);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 24, 16, bottomInset + 16),
       child: AppSurface(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(26),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 44,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: AppPalette.borderSoft,
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
             Text(
-              'Create outing',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+              'NEW OUTING',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppPalette.mutedText,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.8,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Start by naming the outing and choosing the availability window. You can add destinations, GPS sharing, and optional expenses after the group agrees on the best time.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: AppPalette.mutedText),
+              'Name it. Set the window.',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: AppPalette.ink,
+                fontWeight: FontWeight.w700,
+                height: 1.1,
+              ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 8),
+            Text(
+              'Add destinations, GPS sharing, and optional expenses once the group lands on a time.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppPalette.mutedText,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 22),
             TextField(
               controller: _titleController,
               textCapitalization: TextCapitalization.words,
@@ -649,7 +1238,7 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             Row(
               children: [
                 Expanded(
@@ -660,9 +1249,9 @@ class _CreatePlanningBoardSheetState extends State<_CreatePlanningBoardSheet> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton(
+                  child: _PrimaryAction(
+                    label: 'Create outing',
                     onPressed: _submit,
-                    child: const Text('Create outing'),
                   ),
                 ),
               ],

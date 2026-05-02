@@ -10,6 +10,7 @@ import 'package:chat_utilities_hub/src/screens/home_screen.dart';
 import 'package:chat_utilities_hub/src/screens/utility_detail_screen.dart';
 import 'package:chat_utilities_hub/src/state/utility_app_state.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ChatUtilitiesHubApp extends StatefulWidget {
   const ChatUtilitiesHubApp({
@@ -89,10 +90,71 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppPalette.primary,
+    final colorScheme = ColorScheme(
       brightness: Brightness.light,
+      primary: AppPalette.primary,
+      onPrimary: Colors.white,
+      primaryContainer: AppPalette.primarySoft,
+      onPrimaryContainer: AppPalette.primaryInk,
+      secondary: AppPalette.ink,
+      onSecondary: AppPalette.canvas,
+      secondaryContainer: AppPalette.surfaceMuted,
+      onSecondaryContainer: AppPalette.ink,
+      tertiary: AppPalette.warning,
+      onTertiary: Colors.white,
+      error: AppPalette.danger,
+      onError: Colors.white,
       surface: AppPalette.surface,
+      onSurface: AppPalette.ink,
+      onSurfaceVariant: AppPalette.mutedText,
+      outline: AppPalette.border,
+      outlineVariant: AppPalette.borderSoft,
+    );
+
+    final base = ThemeData(colorScheme: colorScheme, useMaterial3: true);
+    final body = GoogleFonts.interTextTheme(base.textTheme).apply(
+      bodyColor: AppPalette.ink,
+      displayColor: AppPalette.ink,
+    );
+    final display = GoogleFonts.frauncesTextTheme(base.textTheme);
+
+    final textTheme = body.copyWith(
+      displayLarge: display.displayLarge?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w700,
+        height: 0.98,
+        letterSpacing: -1.5,
+      ),
+      displayMedium: display.displayMedium?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w700,
+        height: 1.0,
+        letterSpacing: -1.0,
+      ),
+      displaySmall: display.displaySmall?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w700,
+        height: 1.05,
+      ),
+      headlineLarge: display.headlineLarge?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w700,
+        height: 1.05,
+      ),
+      headlineMedium: display.headlineMedium?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w700,
+        height: 1.1,
+      ),
+      headlineSmall: display.headlineSmall?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w600,
+        height: 1.15,
+      ),
+      titleLarge: display.titleLarge?.copyWith(
+        color: AppPalette.ink,
+        fontWeight: FontWeight.w600,
+      ),
     );
 
     return MaterialApp.router(
@@ -102,65 +164,112 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
         colorScheme: colorScheme,
         useMaterial3: true,
         scaffoldBackgroundColor: AppPalette.canvas,
-        appBarTheme: const AppBarTheme(
+        textTheme: textTheme,
+        primaryTextTheme: textTheme,
+        canvasColor: AppPalette.canvas,
+        dividerColor: AppPalette.borderSoft,
+        appBarTheme: AppBarTheme(
           centerTitle: false,
           elevation: 0,
           scrolledUnderElevation: 0,
           backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
-          foregroundColor: AppPalette.text,
+          foregroundColor: AppPalette.ink,
+          titleTextStyle: textTheme.titleLarge,
         ),
         cardTheme: CardThemeData(
           color: AppPalette.surface,
           elevation: 0,
           margin: EdgeInsets.zero,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(26),
+            side: const BorderSide(color: AppPalette.border, width: 1.6),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: AppPalette.surface,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
+            horizontal: 18,
+            vertical: 18,
+          ),
+          labelStyle: const TextStyle(
+            color: AppPalette.mutedText,
+            fontWeight: FontWeight.w500,
+          ),
+          floatingLabelStyle: const TextStyle(
+            color: AppPalette.ink,
+            fontWeight: FontWeight.w600,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppPalette.border, width: 1.4),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: AppPalette.border),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppPalette.border, width: 1.4),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: AppPalette.primary, width: 1.2),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: AppPalette.ink, width: 2),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: AppPalette.primary,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            backgroundColor: AppPalette.ink,
+            foregroundColor: AppPalette.canvas,
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              letterSpacing: 0.1,
+            ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
             ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppPalette.text,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            side: const BorderSide(color: AppPalette.border),
+            foregroundColor: AppPalette.ink,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            side: const BorderSide(color: AppPalette.border, width: 1.4),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+            ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
             ),
           ),
         ),
-        snackBarTheme: const SnackBarThemeData(
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: AppPalette.ink,
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: AppPalette.surfaceMuted,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+            side: const BorderSide(color: AppPalette.borderSoft),
+          ),
+          labelStyle: const TextStyle(
+            color: AppPalette.ink,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
+          backgroundColor: AppPalette.ink,
+          contentTextStyle: GoogleFonts.inter(
+            color: AppPalette.canvas,
+            fontWeight: FontWeight.w500,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
       routerDelegate: _routerDelegate,

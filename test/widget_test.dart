@@ -172,9 +172,9 @@ void main() {
     await tester.pumpWidget(const ChatUtilitiesHubApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Outings'), findsOneWidget);
-    expect(find.text('No outings yet'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Create outing'), findsWidgets);
+    expect(find.text('Plan Together'), findsOneWidget);
+    expect(find.text('A blank week,'), findsOneWidget);
+    expect(find.text('Create your first outing'), findsOneWidget);
   });
 
   testWidgets('opens a utility from a launch link', (tester) async {
@@ -202,7 +202,7 @@ void main() {
     await tester.pumpWidget(ChatUtilitiesHubApp(repository: repository));
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilledButton, 'New outing'), findsOneWidget);
+    expect(find.text('Start a new outing'), findsOneWidget);
   });
 
   testWidgets('paints and erases availability by dragging across the board', (
