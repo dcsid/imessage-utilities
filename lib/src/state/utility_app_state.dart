@@ -68,6 +68,29 @@ class UtilityAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void removeUtility(String utilityId) {
+    _repository.removeUtility(utilityId);
+    if (_selectedUtilityId == utilityId) {
+      _selectedUtilityId = null;
+    }
+    notifyListeners();
+  }
+
+  void lockTime({required String utilityId, required String optionId}) {
+    final utility = _repository.lockTime(
+      utilityId: utilityId,
+      optionId: optionId,
+    );
+    _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
+  void unlockTime({required String utilityId}) {
+    final utility = _repository.unlockTime(utilityId: utilityId);
+    _selectedUtilityId = utility.id;
+    notifyListeners();
+  }
+
   void createPlanningBoard(CreatePlanningBoardInput input) {
     final utility = _repository.createPlanningBoard(input);
     _selectedUtilityId = utility.id;

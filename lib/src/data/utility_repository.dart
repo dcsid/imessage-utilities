@@ -17,6 +17,12 @@ abstract class UtilityRepository {
 
   UtilityInstance createPlanningBoard(CreatePlanningBoardInput input);
 
+  void removeUtility(String utilityId);
+
+  UtilityInstance lockTime({required String utilityId, required String optionId});
+
+  UtilityInstance unlockTime({required String utilityId});
+
   UtilityInstance saveResponse({
     required String utilityId,
     required String participantName,

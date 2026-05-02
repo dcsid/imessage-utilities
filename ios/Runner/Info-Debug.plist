@@ -45,6 +45,10 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Allow Chat Utilities Hub to connect to Flutter debugging tools on this Mac.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Used so you can add a locked-in outing time to your calendar.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Used so you can add a locked-in outing time to your calendar.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

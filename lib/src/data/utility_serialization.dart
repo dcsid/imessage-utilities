@@ -61,6 +61,7 @@ Map<String, dynamic> utilityToMap(UtilityInstance utility) {
         .map(locationShareToMap)
         .toList(growable: false),
     'closesAt': utility.closesAt?.toIso8601String(),
+    'lockedOptionId': utility.lockedOptionId,
   };
 }
 
@@ -95,6 +96,7 @@ UtilityInstance utilityFromMap(Map<String, dynamic> map) {
             .map(locationShareFromMap)
             .toList(growable: false),
     closesAt: parseDateTime(map['closesAt'] as String?),
+    lockedOptionId: map['lockedOptionId'] as String?,
   );
 }
 

@@ -390,6 +390,7 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
             utilities: _appState.utilities,
             onOpenUtility: _appState.openUtility,
             onCreateBoard: _appState.createPlanningBoard,
+            onDeleteUtility: _appState.removeUtility,
             userContact: _authController.userContact,
             onSignOut: _authController.isEnabled
                 ? () {
@@ -413,6 +414,9 @@ class UtilityRouterDelegate extends RouterDelegate<UtilityRoutePath>
               onRemoveExpense: _appState.removeExpense,
               onSaveLocationShare: _appState.saveLocationShare,
               onEndLocationShare: _appState.endLocationShare,
+              onLockTime: _appState.lockTime,
+              onUnlockTime: _appState.unlockTime,
+              userContact: _authController.userContact,
             ),
           ),
       ],

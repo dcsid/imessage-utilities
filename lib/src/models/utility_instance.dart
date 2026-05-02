@@ -20,6 +20,7 @@ class UtilityInstance {
     this.plannedStops = const [],
     this.locationShares = const [],
     this.closesAt,
+    this.lockedOptionId,
   });
 
   final String id;
@@ -33,6 +34,22 @@ class UtilityInstance {
   final List<TripStop> plannedStops;
   final List<ParticipantLocationShare> locationShares;
   final DateTime? closesAt;
+  final String? lockedOptionId;
+
+  bool get isTimeLocked => lockedOption != null;
+
+  UtilityOption? get lockedOption {
+    final id = lockedOptionId;
+    if (id == null) {
+      return null;
+    }
+    for (final option in options) {
+      if (option.id == id) {
+        return option;
+      }
+    }
+    return null;
+  }
 
   int get responseCount => responses.length;
 
@@ -128,6 +145,8 @@ class UtilityInstance {
     List<TripStop>? plannedStops,
     List<ParticipantLocationShare>? locationShares,
     DateTime? closesAt,
+    String? lockedOptionId,
+    bool clearLockedOption = false,
   }) {
     return UtilityInstance(
       id: id ?? this.id,
@@ -142,6 +161,9 @@ class UtilityInstance {
       plannedStops: plannedStops ?? this.plannedStops,
       locationShares: locationShares ?? this.locationShares,
       closesAt: closesAt ?? this.closesAt,
+      lockedOptionId: clearLockedOption
+          ? null
+          : (lockedOptionId ?? this.lockedOptionId),
     );
   }
 

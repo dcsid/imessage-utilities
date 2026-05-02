@@ -1,7 +1,10 @@
+import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:chat_utilities_hub/src/auth/identity_helpers.dart';
 import 'package:chat_utilities_hub/src/models/geo_point.dart';
 import 'package:chat_utilities_hub/src/models/location_share_mode.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
+import 'package:chat_utilities_hub/src/models/utility_option.dart';
 import 'package:chat_utilities_hub/src/models/utility_response.dart';
 import 'package:chat_utilities_hub/src/presentation/app_backdrop.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
@@ -26,10 +29,17 @@ class UtilityDetailScreen extends StatefulWidget {
     required this.onRemoveExpense,
     required this.onSaveLocationShare,
     required this.onEndLocationShare,
+    required this.onLockTime,
+    required this.onUnlockTime,
+    this.userContact,
   });
 
   final UtilityInstance utility;
   final VoidCallback onBack;
+  final void Function({required String utilityId, required String optionId})
+  onLockTime;
+  final void Function({required String utilityId}) onUnlockTime;
+  final String? userContact;
   final void Function({
     required String utilityId,
     required String participantName,
@@ -132,6 +142,7 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
                 const SizedBox(height: 12),
                 _ResponseComposerCard(
                   utility: utility,
+                  userContact: widget.userContact,
                   onSaveResponse: widget.onSaveResponse,
                   onBoardInteractionChanged: _setAvailabilityBoardInteraction,
                 ),
@@ -143,26 +154,32 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const _SectionTitle(
-                  title: 'Best times',
-                  subtitle:
-                      'These are the strongest candidate windows based on the responses currently on the board.',
-                ),
-                const SizedBox(height: 12),
-                AppSurface(
-                  child: Column(
-                    children: rankedScores
-                        .map(
-                          (score) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _TopTimeRow(
-                              score: score,
-                              totalParticipants: utility.participants.length,
-                            ),
+                _BestTimesBlock(
+                  utility: utility,
+                  rankedScores: rankedScores,
+                  onLockTime: (optionId) {
+                    widget.onLockTime(
+                      utilityId: utility.id,
+                      optionId: optionId,
+                    );
+                    final option = utility.options
+                        .where((o) => o.id == optionId)
+                        .cast<UtilityOption?>()
+                        .firstOrNull;
+                    if (option != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Locked in ${formatUtilityOption(option)}.',
                           ),
-                        )
-                        .toList(growable: false),
-                  ),
+                        ),
+                      );
+                    }
+                  },
+                  onUnlockTime: () =>
+                      widget.onUnlockTime(utilityId: utility.id),
+                  onAddToCalendar: () =>
+                      _handleAddToCalendar(context, utility),
                 ),
                 const SizedBox(height: 20),
                 const _SectionTitle(
@@ -221,6 +238,50 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleAddToCalendar(
+    BuildContext context,
+    UtilityInstance utility,
+  ) async {
+    final option = utility.lockedOption;
+    if (option == null) {
+      return;
+    }
+    final start = option.startAt;
+    final end = option.endAt;
+    if (start == null || end == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This time slot does not have a precise start/end.'),
+        ),
+      );
+      return;
+    }
+    final firstStop = utility.plannedStops.isEmpty
+        ? null
+        : utility.plannedStops.first;
+    final location = firstStop == null
+        ? null
+        : firstStop.address?.isNotEmpty == true
+        ? '${firstStop.title}, ${firstStop.address}'
+        : firstStop.title;
+
+    final event = Event(
+      title: utility.title,
+      description: 'Planned via Plan Together',
+      location: location,
+      startDate: start,
+      endDate: end,
+    );
+
+    final ok = await Add2Calendar.addEvent2Cal(event);
+    if (!context.mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the calendar sheet.')),
+      );
+    }
   }
 
   Future<void> _copyShareLink(BuildContext context, String utilityId) async {
@@ -718,10 +779,12 @@ class _ResponseComposerCard extends StatefulWidget {
   const _ResponseComposerCard({
     required this.utility,
     required this.onSaveResponse,
+    this.userContact,
     this.onBoardInteractionChanged,
   });
 
   final UtilityInstance utility;
+  final String? userContact;
   final void Function({
     required String utilityId,
     required String participantName,
@@ -742,7 +805,7 @@ class _ResponseComposerCardState extends State<_ResponseComposerCard> {
   @override
   void initState() {
     super.initState();
-    _participantName = _initialParticipant(widget.utility);
+    _participantName = _initialParticipant(widget.utility, widget.userContact);
     _participantController = TextEditingController(text: _participantName);
     _selectedOptionIds = _selectionsFor(widget.utility, _participantName);
   }
@@ -753,7 +816,7 @@ class _ResponseComposerCardState extends State<_ResponseComposerCard> {
     if (oldWidget.utility != widget.utility) {
       final typedName = _participantController.text.trim();
       _participantName = typedName.isEmpty
-          ? _initialParticipant(widget.utility)
+          ? _initialParticipant(widget.utility, widget.userContact)
           : typedName;
       _participantController.value = TextEditingValue(
         text: _participantName,
@@ -894,7 +957,15 @@ class _ResponseComposerCardState extends State<_ResponseComposerCard> {
     );
   }
 
-  String _initialParticipant(UtilityInstance utility) {
+  String _initialParticipant(UtilityInstance utility, String? userContact) {
+    final matched = matchingParticipant(utility.participants, userContact);
+    if (matched != null) {
+      return matched;
+    }
+    final derived = displayNameFromContact(userContact);
+    if (derived != null) {
+      return derived;
+    }
     for (final participant in utility.participants) {
       if (utility.responseForParticipant(participant) == null) {
         return participant;
@@ -929,6 +1000,384 @@ class _InlineStatusPill extends StatelessWidget {
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           color: AppPalette.primary,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _BestTimesBlock extends StatelessWidget {
+  const _BestTimesBlock({
+    required this.utility,
+    required this.rankedScores,
+    required this.onLockTime,
+    required this.onUnlockTime,
+    required this.onAddToCalendar,
+  });
+
+  final UtilityInstance utility;
+  final List<UtilityOptionScore> rankedScores;
+  final ValueChanged<String> onLockTime;
+  final VoidCallback onUnlockTime;
+  final VoidCallback onAddToCalendar;
+
+  @override
+  Widget build(BuildContext context) {
+    final lockedOption = utility.lockedOption;
+    final accent = AppPalette.accentFor(utility.id);
+    final remainingScores = lockedOption == null
+        ? rankedScores
+        : rankedScores
+              .where((score) => score.option.id != lockedOption.id)
+              .toList(growable: false);
+
+    if (lockedOption != null) {
+      final lockedScore = _scoreFor(lockedOption.id);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _LockedTimeBanner(
+            utility: utility,
+            option: lockedOption,
+            score: lockedScore,
+            accent: accent,
+            onUnlock: onUnlockTime,
+            onAddToCalendar: onAddToCalendar,
+          ),
+          if (remainingScores.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const _SectionTitle(
+              title: 'Other strong options',
+              subtitle:
+                  'Kept here in case the group wants a backup or to switch.',
+            ),
+            const SizedBox(height: 12),
+            AppSurface(
+              child: Column(
+                children: remainingScores
+                    .take(4)
+                    .map(
+                      (score) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _TopTimeRow(
+                          score: score,
+                          totalParticipants: utility.participants.length,
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    final topScore = rankedScores.isEmpty ? null : rankedScores.first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionTitle(
+          title: 'Best times',
+          subtitle:
+              'These are the strongest candidate windows based on the responses currently on the board.',
+        ),
+        const SizedBox(height: 12),
+        if (topScore != null && topScore.votes > 0)
+          AppSurface(
+            accent: accent,
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TOP CHOICE',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppPalette.mutedText,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _TopTimeRow(
+                  score: topScore,
+                  totalParticipants: utility.participants.length,
+                ),
+                const SizedBox(height: 14),
+                _LockTimeButton(
+                  accent: accent,
+                  onPressed: () => onLockTime(topScore.option.id),
+                ),
+              ],
+            ),
+          ),
+        if (rankedScores.length > 1) ...[
+          const SizedBox(height: 14),
+          AppSurface(
+            child: Column(
+              children: rankedScores
+                  .skip(topScore != null && topScore.votes > 0 ? 1 : 0)
+                  .take(4)
+                  .map(
+                    (score) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _TopTimeRow(
+                        score: score,
+                        totalParticipants: utility.participants.length,
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  UtilityOptionScore? _scoreFor(String optionId) {
+    for (final score in rankedScores) {
+      if (score.option.id == optionId) {
+        return score;
+      }
+    }
+    return null;
+  }
+}
+
+class _LockedTimeBanner extends StatelessWidget {
+  const _LockedTimeBanner({
+    required this.utility,
+    required this.option,
+    required this.score,
+    required this.accent,
+    required this.onUnlock,
+    required this.onAddToCalendar,
+  });
+
+  final UtilityInstance utility;
+  final UtilityOption option;
+  final UtilityOptionScore? score;
+  final OutingAccent accent;
+  final VoidCallback onUnlock;
+  final VoidCallback onAddToCalendar;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dateLine = formatUtilityOption(option);
+    final voteLine = score == null
+        ? 'Locked by the organizer'
+        : '${score!.votes} of ${utility.participants.length} were available';
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppPalette.border, width: 1.6),
+        boxShadow: [
+          const BoxShadow(
+            color: AppPalette.border,
+            offset: Offset(5, 6),
+            blurRadius: 0,
+          ),
+          BoxShadow(
+            color: accent.base.withValues(alpha: 0.28),
+            offset: const Offset(0, 22),
+            blurRadius: 38,
+            spreadRadius: -10,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26.4),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                accent.base,
+                Color.lerp(accent.base, accent.ink, 0.5) ?? accent.base,
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.55),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'LOCKED IN',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                dateLine,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                voteLine,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _BannerButton(
+                    icon: Icons.calendar_month_rounded,
+                    label: 'Add to Calendar',
+                    onTap: onAddToCalendar,
+                    primary: true,
+                  ),
+                  _BannerButton(
+                    icon: Icons.lock_open_rounded,
+                    label: 'Unlock',
+                    onTap: onUnlock,
+                    primary: false,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerButton extends StatelessWidget {
+  const _BannerButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.primary,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = primary ? Colors.white : Colors.white.withValues(alpha: 0.12);
+    final fg = primary ? AppPalette.ink : Colors.white;
+    final border = primary
+        ? Colors.transparent
+        : Colors.white.withValues(alpha: 0.55);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: fg, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: fg,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LockTimeButton extends StatelessWidget {
+  const _LockTimeButton({required this.accent, required this.onPressed});
+
+  final OutingAccent accent;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppPalette.ink,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: accent.base.withValues(alpha: 0.95),
+                offset: const Offset(3, 4),
+                blurRadius: 0,
+              ),
+            ],
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_rounded, color: AppPalette.canvas, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'Lock this time',
+                style: TextStyle(
+                  color: AppPalette.canvas,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

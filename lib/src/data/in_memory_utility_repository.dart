@@ -88,6 +88,39 @@ class InMemoryUtilityRepository implements UtilityRepository {
   }
 
   @override
+  void removeUtility(String utilityId) {
+    final index = _utilities.indexWhere((utility) => utility.id == utilityId);
+    if (index == -1) {
+      return;
+    }
+    _utilities.removeAt(index);
+  }
+
+  @override
+  UtilityInstance lockTime({
+    required String utilityId,
+    required String optionId,
+  }) {
+    final index = _indexForUtility(utilityId);
+    final utility = _utilities[index];
+    if (utility.options.every((option) => option.id != optionId)) {
+      throw StateError('Unknown option id: $optionId');
+    }
+    final updatedUtility = utility.copyWith(lockedOptionId: optionId);
+    _utilities[index] = updatedUtility;
+    return updatedUtility;
+  }
+
+  @override
+  UtilityInstance unlockTime({required String utilityId}) {
+    final index = _indexForUtility(utilityId);
+    final utility = _utilities[index];
+    final updatedUtility = utility.copyWith(clearLockedOption: true);
+    _utilities[index] = updatedUtility;
+    return updatedUtility;
+  }
+
+  @override
   UtilityInstance addTripStop({
     required String utilityId,
     required String title,

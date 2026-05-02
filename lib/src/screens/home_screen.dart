@@ -1,9 +1,12 @@
+import 'package:chat_utilities_hub/src/auth/identity_helpers.dart';
 import 'package:chat_utilities_hub/src/models/create_planning_board_input.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/models/utility_link.dart';
 import 'package:chat_utilities_hub/src/presentation/app_backdrop.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/app_surface.dart';
+import 'package:chat_utilities_hub/src/presentation/outing_sticker.dart';
+import 'package:chat_utilities_hub/src/screens/past_outings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -15,6 +18,7 @@ class HomeScreen extends StatelessWidget {
     required this.utilities,
     required this.onOpenUtility,
     required this.onCreateBoard,
+    required this.onDeleteUtility,
     this.userContact,
     this.onSignOut,
   });
@@ -22,11 +26,23 @@ class HomeScreen extends StatelessWidget {
   final List<UtilityInstance> utilities;
   final ValueChanged<String> onOpenUtility;
   final ValueChanged<CreatePlanningBoardInput> onCreateBoard;
+  final ValueChanged<String> onDeleteUtility;
   final String? userContact;
   final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final active = <UtilityInstance>[];
+    final past = <UtilityInstance>[];
+    for (final utility in utilities) {
+      if (_isPast(utility, now)) {
+        past.add(utility);
+      } else {
+        active.add(utility);
+      }
+    }
+
     return Scaffold(
       body: AppBackdrop(
         child: SafeArea(
@@ -44,27 +60,37 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 36),
                   _Headline(
                     onCreateOuting: () => _showCreateBoardSheet(context),
+                    hasActive: active.isNotEmpty,
                     hasOutings: utilities.isNotEmpty,
                   ),
                   const SizedBox(height: 28),
-                  if (utilities.isNotEmpty) ...[
-                    _StatTicker(utilities: utilities),
+                  if (active.isNotEmpty) ...[
+                    _StatTicker(active: active, past: past),
                     const SizedBox(height: 28),
-                    const _SectionRule(label: 'Your outings'),
+                    const _SectionRule(label: 'Plans in motion'),
                     const SizedBox(height: 18),
-                    ...utilities.map(
+                    ...active.map(
                       (utility) => Padding(
                         padding: const EdgeInsets.only(bottom: 22),
-                        child: _OutingSticker(
+                        child: OutingSticker(
                           utility: utility,
                           onOpen: () => onOpenUtility(utility.id),
                           onCopyLink: () => _copyOutingLink(context, utility),
+                          onDelete: () => _handleDelete(context, utility),
                         ),
                       ),
                     ),
+                  ] else if (utilities.isNotEmpty) ...[
+                    const _ActiveEmptyHint(),
+                    const SizedBox(height: 24),
                   ] else
                     _EmptyState(
                       onCreateOuting: () => _showCreateBoardSheet(context),
+                    ),
+                  if (past.isNotEmpty)
+                    _ArchiveEntry(
+                      count: past.length,
+                      onTap: () => _openArchive(context, past),
                     ),
                 ],
               ),
@@ -73,6 +99,40 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _openArchive(BuildContext context, List<UtilityInstance> past) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PastOutingsScreen(
+          utilities: past,
+          onOpenUtility: onOpenUtility,
+          onCopyLink: (utility) => _copyOutingLink(context, utility),
+          onDeleteUtility: (utility) => onDeleteUtility(utility.id),
+        ),
+      ),
+    );
+  }
+
+  void _handleDelete(BuildContext context, UtilityInstance utility) {
+    onDeleteUtility(utility.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${utility.title}" deleted.')),
+      );
+    }
+  }
+
+  bool _isPast(UtilityInstance utility, DateTime now) {
+    final closesAt = utility.closesAt;
+    if (closesAt != null) {
+      return closesAt.isBefore(now);
+    }
+    final endsAt = utility.endsAt;
+    if (endsAt != null) {
+      return endsAt.isBefore(now);
+    }
+    return false;
   }
 
   Future<void> _showCreateBoardSheet(BuildContext context) async {
@@ -90,26 +150,8 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  static String? _defaultOwnerName(String? userContact) {
-    if (userContact == null || userContact.isEmpty) {
-      return null;
-    }
-
-    if (!userContact.contains('@')) {
-      return null;
-    }
-
-    final localPart = userContact.split('@').first.trim();
-    if (localPart.isEmpty) {
-      return userContact;
-    }
-
-    return localPart
-        .split(RegExp(r'[._-]+'))
-        .where((chunk) => chunk.isNotEmpty)
-        .map((chunk) => '${chunk[0].toUpperCase()}${chunk.substring(1)}')
-        .join(' ');
-  }
+  static String? _defaultOwnerName(String? userContact) =>
+      displayNameFromContact(userContact);
 
   Future<void> _copyOutingLink(
     BuildContext context,
@@ -128,7 +170,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// Top-of-page wordmark + the user's account chip.
 class _Wordmark extends StatelessWidget {
   const _Wordmark({this.userContact, this.onSignOut});
 
@@ -233,22 +274,31 @@ class _AccountChip extends StatelessWidget {
   }
 }
 
-/// Editorial display headline + primary "Start an outing" CTA.
 class _Headline extends StatelessWidget {
-  const _Headline({required this.onCreateOuting, required this.hasOutings});
+  const _Headline({
+    required this.onCreateOuting,
+    required this.hasActive,
+    required this.hasOutings,
+  });
 
   final VoidCallback onCreateOuting;
+  final bool hasActive;
   final bool hasOutings;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final eyebrow = hasActive
+        ? 'PLANS IN MOTION'
+        : hasOutings
+        ? 'A QUIET WEEK'
+        : 'A QUIET DASHBOARD';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          hasOutings ? 'PLANS IN MOTION' : 'A QUIET DASHBOARD',
+          eyebrow,
           style: theme.textTheme.labelSmall?.copyWith(
             color: AppPalette.mutedText,
             fontWeight: FontWeight.w700,
@@ -303,7 +353,6 @@ class _Headline extends StatelessWidget {
   }
 }
 
-/// Big chunky CTA — ink fill, hard offset shadow, no rounded-rect blandness.
 class _PrimaryAction extends StatelessWidget {
   const _PrimaryAction({required this.label, required this.onPressed});
 
@@ -370,21 +419,20 @@ class _PrimaryAction extends StatelessWidget {
   }
 }
 
-/// Horizontal numeric ticker — large display numerals with tabular figures
-/// and small labels underneath, separated by ink hairlines.
 class _StatTicker extends StatelessWidget {
-  const _StatTicker({required this.utilities});
+  const _StatTicker({required this.active, required this.past});
 
-  final List<UtilityInstance> utilities;
+  final List<UtilityInstance> active;
+  final List<UtilityInstance> past;
 
   @override
   Widget build(BuildContext context) {
-    final responses = utilities.fold<int>(
+    final responses = active.fold<int>(
       0,
       (total, u) => total + u.responseCount,
     );
-    final stops = utilities.fold<int>(0, (total, u) => total + u.stopCount);
-    final shares = utilities.fold<int>(
+    final stops = active.fold<int>(0, (total, u) => total + u.stopCount);
+    final shares = active.fold<int>(
       0,
       (total, u) => total + u.activeLocationShareCount,
     );
@@ -399,7 +447,7 @@ class _StatTicker extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _StatCell(value: utilities.length, label: 'OUTINGS'),
+          _StatCell(value: active.length, label: 'ACTIVE'),
           const _StatDivider(),
           _StatCell(value: responses, label: 'RESPONSES'),
           const _StatDivider(),
@@ -461,16 +509,10 @@ class _StatDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 44,
-      color: AppPalette.borderSoft,
-    );
+    return Container(width: 1, height: 44, color: AppPalette.borderSoft);
   }
 }
 
-/// Section rule — small label sitting on a hairline. Replaces the
-/// boilerplate "titleLarge bold heading."
 class _SectionRule extends StatelessWidget {
   const _SectionRule({required this.label});
 
@@ -491,9 +533,7 @@ class _SectionRule extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Expanded(
-          child: Container(height: 1, color: AppPalette.borderSoft),
-        ),
+        Expanded(child: Container(height: 1, color: AppPalette.borderSoft)),
         const SizedBox(width: 12),
         Container(
           width: 6,
@@ -508,477 +548,35 @@ class _SectionRule extends StatelessWidget {
   }
 }
 
-/// The whole outing card: gradient sticker header up top, cream body
-/// underneath. Outer wrap carries the ink stroke, hard shadow, and
-/// colored bloom from the outing's accent.
-class _OutingSticker extends StatelessWidget {
-  const _OutingSticker({
-    required this.utility,
-    required this.onOpen,
-    required this.onCopyLink,
-  });
-
-  final UtilityInstance utility;
-  final VoidCallback onOpen;
-  final VoidCallback onCopyLink;
+/// Shown when the user has outings — but they're all archived. Not the
+/// full empty state, just a soft prompt.
+class _ActiveEmptyHint extends StatelessWidget {
+  const _ActiveEmptyHint();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = AppPalette.accentFor(utility.id);
-    final dateLabel = _formatDateRange(utility);
-
-    final topScore = utility.optionScores.isEmpty
-        ? null
-        : utility.optionScores.first;
-    final bestOverlap = utility.participants.isEmpty
-        ? 'Add participants to start collecting'
-        : topScore == null
-        ? 'No time slots yet'
-        : '${topScore.votes} of ${utility.participants.length} agree on the top window';
-    final nextStep = utility.responseCount == 0
-        ? 'Collect the first availability response'
-        : utility.stopCount == 0
-        ? 'Add the first destination'
-        : utility.expenseTrackingEnabled && utility.expenseCount == 0
-        ? 'Log expenses if the group needs them'
-        : 'Open and keep planning';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppPalette.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppPalette.border, width: 1.6),
-        boxShadow: [
-          const BoxShadow(
-            color: AppPalette.border,
-            offset: Offset(5, 6),
-            blurRadius: 0,
-          ),
-          BoxShadow(
-            color: accent.base.withValues(alpha: 0.22),
-            offset: const Offset(0, 22),
-            blurRadius: 38,
-            spreadRadius: -10,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(26.4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _OutingHeader(
-              accent: accent,
-              title: utility.title,
-              dateLabel: dateLabel,
-              organizer: utility.createdBy,
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _NextStepCallout(accent: accent, nextStep: nextStep),
-                  const SizedBox(height: 18),
-                  _StatRow(
-                    accent: accent,
-                    items: [
-                      _StatRowItem(
-                        value:
-                            '${utility.responseCount}/${utility.participants.length}',
-                        label: 'responded',
-                      ),
-                      _StatRowItem(
-                        value: utility.stopCount.toString(),
-                        label: 'places',
-                      ),
-                      _StatRowItem(
-                        value: utility.activeLocationShareCount.toString(),
-                        label: 'live',
-                      ),
-                      _StatRowItem(
-                        value: utility.expenseTrackingEnabled
-                            ? utility.expenseCount.toString()
-                            : '—',
-                        label: 'expenses',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    bestOverlap,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppPalette.mutedText,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _OpenButton(accent: accent, onPressed: onOpen),
-                      ),
-                      const SizedBox(width: 10),
-                      _IconAction(
-                        icon: Icons.link_rounded,
-                        tooltip: 'Copy invite link',
-                        onPressed: onCopyLink,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDateRange(UtilityInstance utility) {
-    final startsAt = utility.startsAt;
-    final endsAt = utility.endsAt;
-    if (startsAt == null || endsAt == null) {
-      return 'Weekly board';
-    }
-    final startMonth = _monthLabel(startsAt.month);
-    final endMonth = _monthLabel(endsAt.month);
-    if (startsAt.month == endsAt.month) {
-      return '$startMonth ${startsAt.day}–${endsAt.day}';
-    }
-    return '$startMonth ${startsAt.day} – $endMonth ${endsAt.day}';
-  }
-
-  String _monthLabel(int month) {
-    const labels = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    return labels[month - 1];
-  }
-}
-
-class _OutingHeader extends StatelessWidget {
-  const _OutingHeader({
-    required this.accent,
-    required this.title,
-    required this.dateLabel,
-    required this.organizer,
-  });
-
-  final OutingAccent accent;
-  final String title;
-  final String dateLabel;
-  final String organizer;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
+    return AppSurface(
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            accent.base,
-            Color.lerp(accent.base, accent.ink, 0.45) ?? accent.base,
-          ],
-        ),
-      ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _MonogramChip(
-                      label: dateLabel,
-                      foreground: Colors.white,
-                      borderColor: Colors.white.withValues(alpha: 0.55),
-                    ),
-                    const SizedBox(width: 8),
-                    _MonogramChip(
-                      label: 'BY ${organizer.toUpperCase()}',
-                      foreground: Colors.white,
-                      borderColor: Colors.white.withValues(alpha: 0.55),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    height: 1.05,
-                  ),
-                ),
-              ],
+          Text(
+            'Nothing on the calendar.',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: AppPalette.ink,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 14),
-          OutingGlyph(accent: accent, size: 52),
-        ],
-      ),
-    );
-  }
-}
-
-class _MonogramChip extends StatelessWidget {
-  const _MonogramChip({
-    required this.label,
-    required this.foreground,
-    required this.borderColor,
-  });
-
-  final String label;
-  final Color foreground;
-  final Color borderColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-          fontSize: 10.5,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _NextStepCallout extends StatelessWidget {
-  const _NextStepCallout({required this.accent, required this.nextStep});
-
-  final OutingAccent accent;
-  final String nextStep;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 16, 14),
-      decoration: BoxDecoration(
-        color: accent.soft,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.base.withValues(alpha: 0.35)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: accent.base,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.north_east_rounded,
-              color: Colors.white,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'NEXT',
-                  style: TextStyle(
-                    color: accent.ink,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 10,
-                    letterSpacing: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  nextStep,
-                  style: TextStyle(
-                    color: accent.ink,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    height: 1.3,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            'Past outings live in the archive. Spin up a new one to fill the week.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppPalette.mutedText,
+              height: 1.45,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatRowItem {
-  const _StatRowItem({required this.value, required this.label});
-  final String value;
-  final String label;
-}
-
-class _StatRow extends StatelessWidget {
-  const _StatRow({required this.accent, required this.items});
-
-  final OutingAccent accent;
-  final List<_StatRowItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0)
-            Container(
-              width: 1,
-              height: 30,
-              color: AppPalette.borderSoft,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  items[i].value,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: _tabularNumerals,
-                    color: AppPalette.ink,
-                    height: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  items[i].label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppPalette.mutedText,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _OpenButton extends StatelessWidget {
-  const _OpenButton({required this.accent, required this.onPressed});
-
-  final OutingAccent accent;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppPalette.ink,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: accent.base.withValues(alpha: 0.95),
-                offset: const Offset(3, 4),
-                blurRadius: 0,
-              ),
-            ],
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Open',
-                style: TextStyle(
-                  color: AppPalette.canvas,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                ),
-              ),
-              SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: AppPalette.canvas,
-                size: 18,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IconAction extends StatelessWidget {
-  const _IconAction({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            width: 50,
-            height: 50,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppPalette.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppPalette.border, width: 1.4),
-            ),
-            child: Icon(icon, color: AppPalette.ink, size: 20),
-          ),
-        ),
       ),
     );
   }
@@ -1027,6 +625,84 @@ class _EmptyState extends StatelessWidget {
             onPressed: onCreateOuting,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Subtle entry to the archive. Reads as a "shelf" — wide, low-emphasis,
+/// nothing demanding attention.
+class _ArchiveEntry extends StatelessWidget {
+  const _ArchiveEntry({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+          decoration: BoxDecoration(
+            color: AppPalette.canvasDeep,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppPalette.borderSoft, width: 1.2),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppPalette.ink,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.archive_outlined,
+                  color: AppPalette.canvas,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Archive',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w700,
+                        color: AppPalette.ink,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$count past ${count == 1 ? 'outing' : 'outings'}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppPalette.mutedText,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: AppPalette.ink,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

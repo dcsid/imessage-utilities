@@ -71,6 +71,33 @@ class LocalUtilityRepository extends InMemoryUtilityRepository {
   }
 
   @override
+  void removeUtility(String utilityId) {
+    super.removeUtility(utilityId);
+    _cloudRecordIds.remove(utilityId);
+    unawaited(_persistCurrentUserUtilities());
+    unawaited(_deleteOutingRecord(utilityId));
+  }
+
+  Future<void> _deleteOutingRecord(String utilityId) async {
+    if (_currentUserId == null) {
+      return;
+    }
+    try {
+      final request = ModelMutations.deleteById(
+        OutingRecord.classType,
+        OutingRecordModelIdentifier(id: utilityId),
+        authorizationMode: APIAuthorizationType.userPools,
+      );
+      final response = await Amplify.API.mutate(request: request).response;
+      if (response.hasErrors) {
+        safePrint('Delete outing error: ${response.errors}');
+      }
+    } catch (error) {
+      safePrint('Skipping remote outing delete: $error');
+    }
+  }
+
+  @override
   UtilityInstance saveResponse({
     required String utilityId,
     required String participantName,
@@ -81,6 +108,23 @@ class LocalUtilityRepository extends InMemoryUtilityRepository {
       participantName: participantName,
       selectedOptionIds: selectedOptionIds,
     );
+    _schedulePersist(utility);
+    return utility;
+  }
+
+  @override
+  UtilityInstance lockTime({
+    required String utilityId,
+    required String optionId,
+  }) {
+    final utility = super.lockTime(utilityId: utilityId, optionId: optionId);
+    _schedulePersist(utility);
+    return utility;
+  }
+
+  @override
+  UtilityInstance unlockTime({required String utilityId}) {
+    final utility = super.unlockTime(utilityId: utilityId);
     _schedulePersist(utility);
     return utility;
   }

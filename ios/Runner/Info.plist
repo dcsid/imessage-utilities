@@ -74,6 +74,10 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Used to show your location on the outing map and optionally share it with others while the outing is active.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Used so you can add a locked-in outing time to your calendar.</string>
+	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
+	<string>Used so you can add a locked-in outing time to your calendar.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
