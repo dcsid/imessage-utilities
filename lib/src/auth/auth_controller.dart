@@ -20,8 +20,15 @@ class AuthController extends ChangeNotifier {
 
   final bool _enabled;
 
+  /// Userid handed out for the read-only "Browse demo" path. Bypasses
+  /// Cognito and uses an in-memory seeded set of outings so resume
+  /// reviewers can poke around without signing up.
+  static const String demoUserId = 'demo-session';
+  static const String demoContact = 'demo@plantogether.app';
+
   AuthStatus _status = AuthStatus.loading;
   bool _busy = false;
+  bool _demoSession = false;
   String? _errorMessage;
   String? _infoMessage;
   String? _pendingIdentifier;
@@ -39,12 +46,14 @@ class AuthController extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get infoMessage => _infoMessage;
   bool get isEnabled => _enabled;
-  String? get userId => _account?.userId;
-  String? get userContact =>
-      _account?.displayContact ??
-      _pendingEmail ??
-      _pendingPhoneNumber ??
-      _pendingIdentifier;
+  bool get isDemoSession => _demoSession;
+  String? get userId => _demoSession ? demoUserId : _account?.userId;
+  String? get userContact => _demoSession
+      ? demoContact
+      : _account?.displayContact ??
+            _pendingEmail ??
+            _pendingPhoneNumber ??
+            _pendingIdentifier;
   String? get deliveryDestination => _deliveryDestination ?? userContact;
   String get confirmationPrompt {
     final destination = deliveryDestination;
@@ -323,6 +332,13 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    if (_demoSession) {
+      _demoSession = false;
+      _clearPendingState();
+      _status = AuthStatus.signedOut;
+      notifyListeners();
+      return;
+    }
     if (!_enabled) {
       return;
     }
@@ -333,6 +349,20 @@ class AuthController extends ChangeNotifier {
       _clearPendingState();
       _status = AuthStatus.signedOut;
     });
+  }
+
+  /// Drop the user into a stateless, sandbox demo session — no Cognito
+  /// call, no cloud sync, in-memory seeded outings only. Used for the
+  /// "Browse demo" entry point on the auth screen so reviewers can
+  /// explore the app without creating an account.
+  void startDemoSession() {
+    _demoSession = true;
+    _account = null;
+    _clearPendingState();
+    _errorMessage = null;
+    _infoMessage = null;
+    _status = AuthStatus.signedIn;
+    notifyListeners();
   }
 
   void showSignIn() {

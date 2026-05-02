@@ -4,6 +4,7 @@ import 'package:amplify_api/amplify_api.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:chat_utilities_hub/src/models/ModelProvider.dart';
 import 'package:chat_utilities_hub/src/models/location_share_mode.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 class LocationService {
@@ -31,6 +32,11 @@ class LocationService {
         _positionStream != null;
   }
 
+  /// Web is viewer-only: broadcasting from a browser doesn't survive a
+  /// closed tab and the iOS-tuned AppleSettings don't apply, so we
+  /// short-circuit here. Reading other participants' locations still works.
+  bool get supportsBroadcasting => !kIsWeb;
+
   Future<void> startBroadcasting({
     required String utilityId,
     required String participantName,
@@ -39,6 +45,13 @@ class LocationService {
     String? statusMessage,
     required bool isBusy,
   }) async {
+    if (kIsWeb) {
+      throw StateError(
+        'Live location sharing is iPhone-only for now. The web app shows '
+        'other participants\' pins but can\'t broadcast your own.',
+      );
+    }
+
     await stopBroadcasting();
     await _ensureLocationPermission();
 

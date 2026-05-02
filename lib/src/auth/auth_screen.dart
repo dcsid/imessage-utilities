@@ -21,7 +21,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passwordController = TextEditingController();
   final _codeController = TextEditingController();
   _AuthMode _mode = _AuthMode.signIn;
-  AuthIdentifierMethod _signUpMethod = AuthIdentifierMethod.email;
+  final AuthIdentifierMethod _signUpMethod = AuthIdentifierMethod.email;
 
   @override
   void dispose() {
@@ -132,10 +132,10 @@ class _AuthScreenState extends State<AuthScreen> {
                                       AuthStatus.awaitingResetPassword
                                 ? controller.resetPasswordPrompt
                                 : _mode == _AuthMode.forgotPassword
-                                ? 'Use your email address or phone number to receive a password reset code.'
+                                ? 'Enter your email and we\'ll send a reset code.'
                                 : _mode == _AuthMode.signUp
-                                ? 'Create an account with either an email address or a phone number. You only need one.'
-                                : 'Sign in with the same email address or phone number you used to create the account.',
+                                ? 'Create an account with your email address.'
+                                : 'Sign in with the email you used to create the account.',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: AppPalette.mutedText),
                           ),
@@ -200,14 +200,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   _signUpIdentifierController,
                               passwordController: _passwordController,
                               isBusy: controller.isBusy,
-                              signUpMethod: _signUpMethod,
                               onSubmit: _submitCredentials,
-                              onSignUpMethodChanged: (method) {
-                                setState(() {
-                                  _signUpMethod = method;
-                                  _signUpIdentifierController.clear();
-                                });
-                              },
                               onModeChanged: (mode) {
                                 setState(() {
                                   _mode = mode;
@@ -221,6 +214,12 @@ class _AuthScreenState extends State<AuthScreen> {
                           if (errorMessage != null) ...[
                             const SizedBox(height: 16),
                             _MessageCard(message: errorMessage, isError: true),
+                          ],
+                          if (controller.status == AuthStatus.signedOut) ...[
+                            const SizedBox(height: 24),
+                            _DemoEntryRow(
+                              onBrowseDemo: controller.startDemoSession,
+                            ),
                           ],
                         ],
                       ),
@@ -243,9 +242,7 @@ class _CredentialsForm extends StatelessWidget {
     required this.signUpIdentifierController,
     required this.passwordController,
     required this.isBusy,
-    required this.signUpMethod,
     required this.onSubmit,
-    required this.onSignUpMethodChanged,
     required this.onModeChanged,
   });
 
@@ -254,9 +251,7 @@ class _CredentialsForm extends StatelessWidget {
   final TextEditingController signUpIdentifierController;
   final TextEditingController passwordController;
   final bool isBusy;
-  final AuthIdentifierMethod signUpMethod;
   final Future<void> Function() onSubmit;
-  final ValueChanged<AuthIdentifierMethod> onSignUpMethodChanged;
   final ValueChanged<_AuthMode> onModeChanged;
 
   @override
@@ -286,57 +281,28 @@ class _CredentialsForm extends StatelessWidget {
                 : (selection) => onModeChanged(selection.first),
           ),
         if (mode != _AuthMode.forgotPassword) const SizedBox(height: 18),
-        if (mode == _AuthMode.signUp) ...[
-          SegmentedButton<AuthIdentifierMethod>(
-            segments: const [
-              ButtonSegment<AuthIdentifierMethod>(
-                value: AuthIdentifierMethod.email,
-                label: Text('Email'),
-              ),
-              ButtonSegment<AuthIdentifierMethod>(
-                value: AuthIdentifierMethod.phone,
-                label: Text('Phone'),
-              ),
-            ],
-            selected: {signUpMethod},
-            onSelectionChanged: isBusy
-                ? null
-                : (selection) => onSignUpMethodChanged(selection.first),
-          ),
-          const SizedBox(height: 14),
+        if (mode == _AuthMode.signUp)
           TextField(
             controller: signUpIdentifierController,
-            keyboardType: signUpMethod == AuthIdentifierMethod.email
-                ? TextInputType.emailAddress
-                : TextInputType.phone,
+            keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            autofillHints: signUpMethod == AuthIdentifierMethod.email
-                ? const [AutofillHints.email]
-                : const [AutofillHints.telephoneNumber],
+            autofillHints: const [AutofillHints.email],
             enabled: !isBusy,
-            decoration: InputDecoration(
-              labelText: signUpMethod == AuthIdentifierMethod.email
-                  ? 'Email address'
-                  : 'Phone number',
-              hintText: signUpMethod == AuthIdentifierMethod.email
-                  ? 'you@example.com'
-                  : '+1 555 123 4567',
+            decoration: const InputDecoration(
+              labelText: 'Email address',
+              hintText: 'you@example.com',
             ),
-          ),
-        ] else
+          )
+        else
           TextField(
             controller: identifierController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            autofillHints: const [
-              AutofillHints.username,
-              AutofillHints.email,
-              AutofillHints.telephoneNumber,
-            ],
+            autofillHints: const [AutofillHints.username, AutofillHints.email],
             enabled: !isBusy,
             decoration: const InputDecoration(
-              labelText: 'Email or phone',
-              hintText: 'you@example.com or +1 555 123 4567',
+              labelText: 'Email',
+              hintText: 'you@example.com',
             ),
           ),
         if (mode != _AuthMode.forgotPassword) ...[
@@ -373,9 +339,7 @@ class _CredentialsForm extends StatelessWidget {
         if (mode == _AuthMode.signUp) ...[
           const SizedBox(height: 10),
           Text(
-            signUpMethod == AuthIdentifierMethod.email
-                ? 'Use a real email address so you can receive the confirmation code.'
-                : 'Use a real mobile number that can receive SMS verification codes.',
+            'Use a real email address so you can receive the confirmation code.',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: AppPalette.mutedText),
@@ -562,6 +526,85 @@ class _ResetPasswordForm extends StatelessWidget {
           child: OutlinedButton(
             onPressed: isBusy ? null : onBack,
             child: const Text('Back to sign in'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DemoEntryRow extends StatelessWidget {
+  const _DemoEntryRow({required this.onBrowseDemo});
+
+  final VoidCallback onBrowseDemo;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Divider(color: AppPalette.borderSoft, thickness: 1),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'or',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppPalette.mutedText,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.4,
+                ),
+              ),
+            ),
+            const Expanded(
+              child: Divider(color: AppPalette.borderSoft, thickness: 1),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onBrowseDemo,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppPalette.surface,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppPalette.border, width: 1.4),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppPalette.ink,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Browse the demo',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: AppPalette.ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'No account needed — explore four sample outings.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppPalette.mutedText,
           ),
         ),
       ],

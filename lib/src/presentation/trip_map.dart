@@ -6,6 +6,7 @@ import 'package:chat_utilities_hub/src/models/geo_point.dart';
 import 'package:chat_utilities_hub/src/models/trip_stop.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
+import 'package:chat_utilities_hub/src/presentation/web_map.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -86,6 +87,8 @@ class _TripMapState extends State<TripMap> {
                       onSelectStop: _handleSelectStop,
                       onAddStopAtPoint: widget.onAddStopAtPoint,
                     )
+                  : kIsWeb
+                  ? WebTripMap(utility: widget.utility, height: widget.height)
                   : _FallbackTripMapSurface(
                       utility: widget.utility,
                       height: widget.height,

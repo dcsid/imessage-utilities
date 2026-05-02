@@ -1,5 +1,6 @@
 import 'package:chat_utilities_hub/src/models/geo_point.dart';
 import 'package:chat_utilities_hub/src/models/trip_place_match.dart';
+import 'package:chat_utilities_hub/src/services/mapbox_geocoding.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -8,10 +9,7 @@ abstract class TripPlaceService {
 
   static const TripPlaceService instance = MethodChannelTripPlaceService();
 
-  Future<List<TripPlaceMatch>> searchPlaces(
-    String query, {
-    GeoPoint? near,
-  });
+  Future<List<TripPlaceMatch>> searchPlaces(String query, {GeoPoint? near});
 
   Future<TripPlaceMatch?> reverseGeocode(GeoPoint point);
 }
@@ -33,15 +31,18 @@ class MethodChannelTripPlaceService extends TripPlaceService {
       return const <TripPlaceMatch>[];
     }
 
+    // Web has no MKLocalSearch; route through Mapbox geocoding instead.
+    if (kIsWeb) {
+      return mapboxSearchPlaces(trimmedQuery, near: near);
+    }
+
     try {
-      final response = await _channel.invokeListMethod<Object?>(
-        'searchPlaces',
-        <String, Object?>{
-          'query': trimmedQuery,
-          'latitude': near?.latitude,
-          'longitude': near?.longitude,
-        },
-      );
+      final response = await _channel
+          .invokeListMethod<Object?>('searchPlaces', <String, Object?>{
+            'query': trimmedQuery,
+            'latitude': near?.latitude,
+            'longitude': near?.longitude,
+          });
       return response
               ?.whereType<Map<Object?, Object?>>()
               .map(TripPlaceMatch.fromMap)
@@ -57,6 +58,9 @@ class MethodChannelTripPlaceService extends TripPlaceService {
 
   @override
   Future<TripPlaceMatch?> reverseGeocode(GeoPoint point) async {
+    if (kIsWeb) {
+      return mapboxReverseGeocode(point);
+    }
     try {
       final response = await _channel.invokeMapMethod<Object?, Object?>(
         'reverseGeocode',

@@ -1,5 +1,5 @@
-import 'package:add_2_calendar/add_2_calendar.dart';
 import 'package:chat_utilities_hub/src/auth/identity_helpers.dart';
+import 'package:chat_utilities_hub/src/services/calendar_export_service.dart';
 import 'package:chat_utilities_hub/src/models/geo_point.dart';
 import 'package:chat_utilities_hub/src/models/location_share_mode.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
@@ -178,8 +178,7 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
                   },
                   onUnlockTime: () =>
                       widget.onUnlockTime(utilityId: utility.id),
-                  onAddToCalendar: () =>
-                      _handleAddToCalendar(context, utility),
+                  onAddToCalendar: () => _handleAddToCalendar(context, utility),
                 ),
                 const SizedBox(height: 20),
                 const _SectionTitle(
@@ -267,15 +266,13 @@ class _UtilityDetailScreenState extends State<UtilityDetailScreen> {
         ? '${firstStop.title}, ${firstStop.address}'
         : firstStop.title;
 
-    final event = Event(
+    final ok = await CalendarExportService.instance.exportEvent(
       title: utility.title,
       description: 'Planned via Plan Together',
       location: location,
-      startDate: start,
-      endDate: end,
+      start: start,
+      end: end,
     );
-
-    final ok = await Add2Calendar.addEvent2Cal(event);
     if (!context.mounted) return;
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(

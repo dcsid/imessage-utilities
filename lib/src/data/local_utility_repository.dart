@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:amplify_api/amplify_api.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
+import 'package:chat_utilities_hub/src/auth/auth_controller.dart';
+import 'package:chat_utilities_hub/src/data/demo_seed.dart';
 import 'package:chat_utilities_hub/src/data/in_memory_utility_repository.dart';
 import 'package:chat_utilities_hub/src/data/utility_serialization.dart';
 import 'package:chat_utilities_hub/src/models/OutingRecord.dart';
@@ -39,6 +41,15 @@ class LocalUtilityRepository extends InMemoryUtilityRepository {
       return;
     }
 
+    // Demo session — load the seed in memory and skip every cloud /
+    // local-cache code path. Edits a demo user makes stay for the
+    // session and disappear on sign-out.
+    if (normalizedUserId == AuthController.demoUserId) {
+      replaceAllUtilities(buildDemoOutings());
+      _hydrated = true;
+      return;
+    }
+
     final localUtilities = _loadCachedUtilities(
       normalizedUserId,
       legacyStorageKeys: legacyStorageKeys,
@@ -63,6 +74,8 @@ class LocalUtilityRepository extends InMemoryUtilityRepository {
     _hydrated = true;
   }
 
+  bool get _isDemoSession => _currentUserId == AuthController.demoUserId;
+
   @override
   UtilityInstance createPlanningBoard(CreatePlanningBoardInput input) {
     final utility = super.createPlanningBoard(input);
@@ -73,6 +86,7 @@ class LocalUtilityRepository extends InMemoryUtilityRepository {
   @override
   void removeUtility(String utilityId) {
     super.removeUtility(utilityId);
+    if (_isDemoSession) return;
     _cloudRecordIds.remove(utilityId);
     unawaited(_persistCurrentUserUtilities());
     unawaited(_deleteOutingRecord(utilityId));
@@ -234,6 +248,7 @@ class LocalUtilityRepository extends InMemoryUtilityRepository {
   }
 
   void _schedulePersist(UtilityInstance utility) {
+    if (_isDemoSession) return;
     unawaited(_persistCurrentUserUtilities());
     unawaited(_syncUtilityToCloud(utility));
   }

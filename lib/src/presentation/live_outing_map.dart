@@ -5,7 +5,9 @@ import 'package:chat_utilities_hub/src/models/ModelProvider.dart';
 import 'package:chat_utilities_hub/src/models/utility_instance.dart';
 import 'package:chat_utilities_hub/src/presentation/app_palette.dart';
 import 'package:chat_utilities_hub/src/presentation/date_labels.dart';
+import 'package:chat_utilities_hub/src/presentation/web_map.dart';
 import 'package:chat_utilities_hub/src/services/location_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -117,18 +119,25 @@ class _LiveOutingMapState extends State<LiveOutingMap> {
         height: widget.height,
         child: Stack(
           children: [
-            AppleMap(
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(38.0336, -78.5080),
-                zoom: 13.5,
+            if (kIsWeb)
+              WebLiveOutingMap(
+                utility: widget.utility,
+                events: sortedEvents,
+                height: widget.height,
+              )
+            else
+              AppleMap(
+                initialCameraPosition: const CameraPosition(
+                  target: LatLng(38.0336, -78.5080),
+                  zoom: 13.5,
+                ),
+                annotations: annotations,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                zoomGesturesEnabled: true,
+                scrollGesturesEnabled: true,
+                rotateGesturesEnabled: true,
               ),
-              annotations: annotations,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: true,
-              zoomGesturesEnabled: true,
-              scrollGesturesEnabled: true,
-              rotateGesturesEnabled: true,
-            ),
             if (widget.showExpandButton)
               Positioned(
                 top: 12,
