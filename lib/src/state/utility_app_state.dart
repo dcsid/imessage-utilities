@@ -14,9 +14,18 @@ class UtilityAppState extends ChangeNotifier {
 
   final UtilityRepository _repository;
   String? _selectedUtilityId;
+  // Deep link target stored before the repo is hydrated. Once hydration
+  // completes (e.g. after a sign-in or demo activation), this gets
+  // applied as the selected utility if the outing actually exists.
+  String? _pendingUtilityId;
   bool _isHydrated;
 
   bool get isHydrated => _isHydrated;
+
+  /// Deep-link utility id that was requested via URL but couldn't be
+  /// resolved yet because the repository hadn't been hydrated. Used by
+  /// the auth gate to decide whether to auto-activate a demo session.
+  String? get pendingUtilityId => _pendingUtilityId;
 
   List<UtilityInstance> get utilities => _repository.getAll();
 
@@ -30,6 +39,12 @@ class UtilityAppState extends ChangeNotifier {
 
   UtilityRoutePath get currentPath {
     if (!_isHydrated) {
+      // Keep the URL bar showing the deep-linked path while we wait for
+      // hydration, instead of flickering back to root.
+      final pending = _pendingUtilityId;
+      if (pending != null) {
+        return UtilityRoutePath.utility(pending);
+      }
       return const UtilityRoutePath.home();
     }
     final selectedUtilityId = _selectedUtilityId;
@@ -43,16 +58,30 @@ class UtilityAppState extends ChangeNotifier {
   void applyRoutePath(UtilityRoutePath routePath) {
     final utilityId = routePath.utilityId;
     if (utilityId == null) {
-      showHome();
+      _pendingUtilityId = null;
+      if (_selectedUtilityId != null) {
+        _selectedUtilityId = null;
+        notifyListeners();
+      }
       return;
     }
 
-    if (_repository.findById(utilityId) == null) {
-      showHome();
+    if (_isHydrated) {
+      if (_repository.findById(utilityId) != null) {
+        _pendingUtilityId = null;
+        _selectedUtilityId = utilityId;
+      } else {
+        // Hydrated and the outing doesn't exist — give up, fall to home.
+        _pendingUtilityId = null;
+        _selectedUtilityId = null;
+      }
+      notifyListeners();
       return;
     }
 
-    _selectedUtilityId = utilityId;
+    // Not hydrated yet (e.g. cold load with a deep-link URL while auth
+    // is still resolving). Stash the request for after hydration.
+    _pendingUtilityId = utilityId;
     notifyListeners();
   }
 
@@ -113,6 +142,17 @@ class UtilityAppState extends ChangeNotifier {
     if (selectedUtilityId != null &&
         _repository.findById(selectedUtilityId) == null) {
       _selectedUtilityId = null;
+    }
+
+    // If a deep link was queued during the empty state, fulfill it now
+    // that the repo has data. Drops the pending id either way so we
+    // don't keep looking for it on subsequent hydrations.
+    final pending = _pendingUtilityId;
+    if (pending != null) {
+      if (_repository.findById(pending) != null) {
+        _selectedUtilityId = pending;
+      }
+      _pendingUtilityId = null;
     }
 
     _isHydrated = true;

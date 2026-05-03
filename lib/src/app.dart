@@ -72,6 +72,23 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
       return;
     }
 
+    // Auto-activate the demo session for shareable invite links pointing
+    // at a seeded outing (e.g. https://.../utility/demo-cville). Lets a
+    // recruiter click a deep link and land directly on the detail
+    // screen without having to find the "Browse the demo" button.
+    if (_authController.isEnabled &&
+        !_authController.isSignedIn &&
+        _authController.status == AuthStatus.signedOut) {
+      final pending = _appState.pendingUtilityId;
+      if (pending != null && pending.startsWith('demo-')) {
+        _authController.startDemoSession();
+        // The auth listener fires again on the state flip and this same
+        // method re-enters with isSignedIn = true; hydration kicks off
+        // there.
+        return;
+      }
+    }
+
     final nextUserId = _authController.isEnabled
         ? (_authController.isSignedIn ? _authController.userId : null)
         : 'local';
