@@ -2,7 +2,7 @@
 
 A single Flutter codebase that ships an iPhone app and a web app from the same `lib/`. The product is a group-outing coordinator: pick a time on a When2Meet-style availability board, lock the winning slot, plan a route on a map, broadcast (or just watch) live location, and settle shared expenses — all backed by AWS Amplify Gen 2.
 
-> **Live demo:** *deploying — link will land here once Amplify Hosting comes up.* On the auth screen click **Browse the demo** for a stateless sandbox seeded with four sample outings; no sign-up required.
+> **Live demo:** **[main.d3pi3iif6jv5s3.amplifyapp.com](https://main.d3pi3iif6jv5s3.amplifyapp.com/)** — on the auth screen click **Browse the demo** for a stateless sandbox seeded with four sample outings; no sign-up required.
 
 Internally still named `chat_utilities_hub`; user-facing brand is **Plan Together**.
 
