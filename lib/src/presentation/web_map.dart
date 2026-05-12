@@ -33,8 +33,14 @@ class WebTripMap extends StatelessWidget {
                 initialZoom: stops.isEmpty ? 12 : 13.5,
                 minZoom: 2,
                 maxZoom: 18,
+                // Drop scrollWheelZoom so the page can scroll past the
+                // map on desktop instead of zooming when the cursor
+                // happens to be over it. Drag / pinch / double-tap zoom
+                // still work for actually interacting with the map.
                 interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  flags: InteractiveFlag.all &
+                      ~InteractiveFlag.rotate &
+                      ~InteractiveFlag.scrollWheelZoom,
                 ),
               ),
               children: [
@@ -108,8 +114,14 @@ class WebLiveOutingMap extends StatelessWidget {
                 initialZoom: 13,
                 minZoom: 2,
                 maxZoom: 18,
+                // Drop scrollWheelZoom so the page can scroll past the
+                // map on desktop instead of zooming when the cursor
+                // happens to be over it. Drag / pinch / double-tap zoom
+                // still work for actually interacting with the map.
                 interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  flags: InteractiveFlag.all &
+                      ~InteractiveFlag.rotate &
+                      ~InteractiveFlag.scrollWheelZoom,
                 ),
               ),
               children: [
