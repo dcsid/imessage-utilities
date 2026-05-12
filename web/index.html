@@ -18,21 +18,54 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FAF7F0">
+  <meta name="description" content="Plan Together - a lightweight planner for picking the when and where with friends.">
+
+  <!-- Preconnect to font CDNs so the runtime Inter + Fraunces fetch
+       starts in parallel with the Flutter bootstrap. Saves ~100-300ms
+       to first text paint on cold loads. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="chat_utilities_hub">
+  <meta name="apple-mobile-web-app-title" content="Plan Together">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>chat_utilities_hub</title>
+  <title>Plan Together</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* App-shell shown while the Flutter engine boots so users see the
+       brand canvas instead of a blank page on cold loads. Removed by
+       JS as soon as the first frame paints. */
+    html, body { margin: 0; padding: 0; background: #FAF7F0; }
+    #app-loading {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #FAF7F0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #1B1B1B;
+    }
+    #app-loading .pulse {
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      background: #1B1B1B;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.96); }
+      50%      { opacity: 1.0;  transform: scale(1.0); }
+    }
+  </style>
 </head>
 <body>
+  <div id="app-loading"><div class="pulse"></div></div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -42,5 +75,12 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // Strip the app-shell as soon as Flutter paints its first frame.
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('app-loading');
+      if (el) { el.remove(); }
+    });
+  </script>
 </body>
 </html>

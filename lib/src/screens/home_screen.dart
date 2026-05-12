@@ -69,14 +69,20 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 28),
                     const _SectionRule(label: 'Plans in motion'),
                     const SizedBox(height: 18),
+                    // RepaintBoundary per card so a single sticker's
+                    // shadow/hover paint doesn't invalidate the whole
+                    // scroll viewport.
                     ...active.map(
                       (utility) => Padding(
                         padding: const EdgeInsets.only(bottom: 22),
-                        child: OutingSticker(
-                          utility: utility,
-                          onOpen: () => onOpenUtility(utility.id),
-                          onCopyLink: () => _copyOutingLink(context, utility),
-                          onDelete: () => _handleDelete(context, utility),
+                        child: RepaintBoundary(
+                          child: OutingSticker(
+                            utility: utility,
+                            onOpen: () => onOpenUtility(utility.id),
+                            onCopyLink: () =>
+                                _copyOutingLink(context, utility),
+                            onDelete: () => _handleDelete(context, utility),
+                          ),
                         ),
                       ),
                     ),

@@ -35,6 +35,14 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
   PlatformRouteInformationProvider? _routeInformationProvider;
   String? _hydratedUserId;
 
+  // Theme + route parser are stable across rebuilds, so we cache them
+  // instead of rebuilding the full GoogleFonts text theme every time
+  // the router notifies. Recomputing this on every root rebuild was
+  // measurable jank on web.
+  ThemeData? _cachedTheme;
+  static const UtilityRouteInformationParser _routeParser =
+      UtilityRouteInformationParser();
+
   @override
   void initState() {
     super.initState();
@@ -105,8 +113,7 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  ThemeData _buildTheme() {
     final colorScheme = ColorScheme(
       brightness: Brightness.light,
       primary: AppPalette.primary,
@@ -174,123 +181,129 @@ class _ChatUtilitiesHubAppState extends State<ChatUtilitiesHubApp> {
       ),
     );
 
-    return MaterialApp.router(
-      title: 'Plan Together',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: colorScheme,
-        useMaterial3: true,
-        scaffoldBackgroundColor: AppPalette.canvas,
-        textTheme: textTheme,
-        primaryTextTheme: textTheme,
-        canvasColor: AppPalette.canvas,
-        dividerColor: AppPalette.borderSoft,
-        appBarTheme: AppBarTheme(
-          centerTitle: false,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: AppPalette.ink,
-          titleTextStyle: textTheme.titleLarge,
+    return ThemeData(
+      colorScheme: colorScheme,
+      useMaterial3: true,
+      scaffoldBackgroundColor: AppPalette.canvas,
+      textTheme: textTheme,
+      primaryTextTheme: textTheme,
+      canvasColor: AppPalette.canvas,
+      dividerColor: AppPalette.borderSoft,
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AppPalette.ink,
+        titleTextStyle: textTheme.titleLarge,
+      ),
+      cardTheme: CardThemeData(
+        color: AppPalette.surface,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(26),
+          side: const BorderSide(color: AppPalette.border, width: 1.6),
         ),
-        cardTheme: CardThemeData(
-          color: AppPalette.surface,
-          elevation: 0,
-          margin: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-            side: const BorderSide(color: AppPalette.border, width: 1.6),
-          ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppPalette.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 18,
         ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppPalette.surface,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 18,
-          ),
-          labelStyle: const TextStyle(
-            color: AppPalette.mutedText,
-            fontWeight: FontWeight.w500,
-          ),
-          floatingLabelStyle: const TextStyle(
-            color: AppPalette.ink,
-            fontWeight: FontWeight.w600,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: const BorderSide(color: AppPalette.border, width: 1.4),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: const BorderSide(color: AppPalette.border, width: 1.4),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide: const BorderSide(color: AppPalette.ink, width: 2),
-          ),
+        labelStyle: const TextStyle(
+          color: AppPalette.mutedText,
+          fontWeight: FontWeight.w500,
         ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: AppPalette.ink,
-            foregroundColor: AppPalette.canvas,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              letterSpacing: 0.1,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
+        floatingLabelStyle: const TextStyle(
+          color: AppPalette.ink,
+          fontWeight: FontWeight.w600,
         ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppPalette.ink,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            side: const BorderSide(color: AppPalette.border, width: 1.4),
-            textStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-          ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppPalette.border, width: 1.4),
         ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: AppPalette.ink,
-            textStyle: const TextStyle(fontWeight: FontWeight.w600),
-          ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppPalette.border, width: 1.4),
         ),
-        chipTheme: ChipThemeData(
-          backgroundColor: AppPalette.surfaceMuted,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-            side: const BorderSide(color: AppPalette.borderSoft),
-          ),
-          labelStyle: const TextStyle(
-            color: AppPalette.ink,
-            fontWeight: FontWeight.w600,
-          ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: AppPalette.ink, width: 2),
         ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
           backgroundColor: AppPalette.ink,
-          contentTextStyle: GoogleFonts.inter(
-            color: AppPalette.canvas,
-            fontWeight: FontWeight.w500,
+          foregroundColor: AppPalette.canvas,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            letterSpacing: 0.1,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppPalette.ink,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          side: const BorderSide(color: AppPalette.border, width: 1.4),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppPalette.ink,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppPalette.surfaceMuted,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+          side: const BorderSide(color: AppPalette.borderSoft),
+        ),
+        labelStyle: const TextStyle(
+          color: AppPalette.ink,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppPalette.ink,
+        contentTextStyle: GoogleFonts.inter(
+          color: AppPalette.canvas,
+          fontWeight: FontWeight.w500,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = _cachedTheme ??= _buildTheme();
+    return MaterialApp.router(
+      title: 'Plan Together',
+      debugShowCheckedModeBanner: false,
+      theme: theme,
       routerDelegate: _routerDelegate,
-      routeInformationParser: const UtilityRouteInformationParser(),
+      routeInformationParser: _routeParser,
       routeInformationProvider: _routeInformationProvider,
       backButtonDispatcher: RootBackButtonDispatcher(),
     );

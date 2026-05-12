@@ -52,6 +52,11 @@ class _PastOutingsScreenState extends State<PastOutingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // Lazy list: header lives at index 0, archived stickers occupy
+    // indices 1..n. ListView.builder only inflates what's near the
+    // viewport, which keeps long archives snappy on cold open.
+    final itemCount = 1 + _utilities.length;
+
     return Scaffold(
       body: AppBackdrop(
         child: SafeArea(
@@ -59,66 +64,21 @@ class _PastOutingsScreenState extends State<PastOutingsScreen> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
-              child: ListView(
+              child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(22, 14, 22, 48),
-                children: [
-                  Row(
-                    children: [
-                      _BackButton(onTap: () => Navigator.of(context).maybePop()),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Plan Together',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w700,
-                          color: AppPalette.ink,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'THE ARCHIVE',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppPalette.mutedText,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2.0,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  RichText(
-                    text: TextSpan(
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        color: AppPalette.ink,
-                        fontWeight: FontWeight.w700,
-                        height: 1.0,
-                        fontSize: 44,
-                      ),
-                      children: const [
-                        TextSpan(text: 'Plans that\n'),
-                        TextSpan(
-                          text: 'happened',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: AppPalette.primary,
-                          ),
-                        ),
-                        TextSpan(text: '.'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    '${_utilities.length} past ${_utilities.length == 1 ? 'outing' : 'outings'} — reopen any to look back, or remove the ones you no longer need.',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppPalette.mutedText,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  for (final utility in _utilities)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 22),
+                itemCount: itemCount,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _ArchiveHeader(
+                      theme: theme,
+                      count: _utilities.length,
+                      onBack: () => Navigator.of(context).maybePop(),
+                    );
+                  }
+                  final utility = _utilities[index - 1];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 22),
+                    child: RepaintBoundary(
                       child: OutingSticker(
                         utility: utility,
                         muted: true,
@@ -133,12 +93,88 @@ class _PastOutingsScreenState extends State<PastOutingsScreen> {
                         onDelete: () => _handleDelete(utility),
                       ),
                     ),
-                ],
+                  );
+                },
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ArchiveHeader extends StatelessWidget {
+  const _ArchiveHeader({
+    required this.theme,
+    required this.count,
+    required this.onBack,
+  });
+
+  final ThemeData theme;
+  final int count;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _BackButton(onTap: onBack),
+            const SizedBox(width: 12),
+            Text(
+              'Plan Together',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w700,
+                color: AppPalette.ink,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 28),
+        Text(
+          'THE ARCHIVE',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: AppPalette.mutedText,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2.0,
+          ),
+        ),
+        const SizedBox(height: 12),
+        RichText(
+          text: TextSpan(
+            style: theme.textTheme.displaySmall?.copyWith(
+              color: AppPalette.ink,
+              fontWeight: FontWeight.w700,
+              height: 1.0,
+              fontSize: 44,
+            ),
+            children: const [
+              TextSpan(text: 'Plans that\n'),
+              TextSpan(
+                text: 'happened',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: AppPalette.primary,
+                ),
+              ),
+              TextSpan(text: '.'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          '$count past ${count == 1 ? 'outing' : 'outings'} — reopen any to look back, or remove the ones you no longer need.',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: AppPalette.mutedText,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 28),
+      ],
     );
   }
 }
